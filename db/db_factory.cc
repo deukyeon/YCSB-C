@@ -37,6 +37,8 @@ DB* DBFactory::CreateDB(utils::Properties &props, bool preloaded) {
     return new RocksDB(props, preloaded);
   } else if (props["dbname"] == "transaction_rocksdb") {
     return new TransactionRocksDB(props, preloaded);
+  } else if (props["dbname"] == "optimistic_transaction_rocksdb") {
+    return new OptimisticTransactionRocksDB(props, preloaded);
   } else if (props["dbname"] == "splinterdb") {
     return new SplinterDB(props, preloaded);
   } else if (props["dbname"] == "transactional_splinterdb") {
