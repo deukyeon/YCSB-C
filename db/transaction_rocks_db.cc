@@ -80,32 +80,6 @@ void TransactionRocksDB::Init() {}
 
 void TransactionRocksDB::Close() {}
 
-int TransactionRocksDB::Read(const string &table, const string &key,
-                             const vector<string> *fields,
-                             vector<KVPair> &result) {
-  return DB::kErrorNotSupport;
-}
-
-int TransactionRocksDB::Scan(const string &table, const string &key, int len,
-                             const vector<string> *fields,
-                             vector<vector<KVPair>> &result) {
-  return DB::kErrorNotSupport;
-}
-
-int TransactionRocksDB::Update(const string &table, const string &key,
-                               vector<KVPair> &values) {
-  return Insert(table, key, values);
-}
-
-int TransactionRocksDB::Insert(const string &table, const string &key,
-                               vector<KVPair> &values) {
-  return DB::kErrorNotSupport;
-}
-
-int TransactionRocksDB::Delete(const string &table, const string &key) {
-  return DB::kErrorNotSupport;
-}
-
 void TransactionRocksDB::Begin(Transaction **txn) {
   *txn = new RocksDBTransaction();
   ((RocksDBTransaction *)*txn)->handle = db->BeginTransaction(woptions);

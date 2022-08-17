@@ -29,19 +29,34 @@ public:
   void Close();
 
   int Read(const std::string &table, const std::string &key,
-           const std::vector<std::string> *fields, std::vector<KVPair> &result);
+           const std::vector<std::string> *fields, std::vector<KVPair> &result)
+  {
+    return DB::kErrorNotSupport;
+  }
 
   int Scan(const std::string &table, const std::string &key, int len,
            const std::vector<std::string> *fields,
-           std::vector<std::vector<KVPair>> &result);
+           std::vector<std::vector<KVPair>> &result)
+  {
+    return DB::kErrorNotSupport;
+  }
 
   int Update(const std::string &table, const std::string &key,
-             std::vector<KVPair> &values);
+             std::vector<KVPair> &values)
+  {
+    return DB::kErrorNotSupport;
+  }
 
   int Insert(const std::string &table, const std::string &key,
-             std::vector<KVPair> &values);
+             std::vector<KVPair> &values)    
+  {
+    return DB::kErrorNotSupport;
+  }
 
-  int Delete(const std::string &table, const std::string &key);
+  int Delete(const std::string &table, const std::string &key)
+  {
+    return DB::kErrorNotSupport;
+  }
 
   void Begin(Transaction **txn);
 
