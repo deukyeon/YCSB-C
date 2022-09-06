@@ -22,7 +22,10 @@ public:
 
   virtual ~Transaction(){};
 
-  void SetTransactionOperationsSize(unsigned long size) { ops.resize(size); };
+  void ReadyToRecordOperations(unsigned long size) {
+    ops.resize(size);
+    next_op = 0;
+  };
 
   unsigned long GetTransactionOperationsSize() { return ops.size(); };
 
@@ -34,7 +37,7 @@ public:
 
   bool IsAborted() { return is_aborted; };
 
-private:
+protected:
   std::vector<TransactionOperation> ops;
   unsigned long next_op;
 
