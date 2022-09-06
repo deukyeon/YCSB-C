@@ -14,6 +14,7 @@
 #include "transaction.h"
 #include "utils.h"
 #include <string>
+#include <atomic>
 
 namespace ycsbc {
 
@@ -22,13 +23,19 @@ public:
   Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) {
     workload_.InitKeyBuffer(key);
     workload_.InitPairs(pairs);
+
+    abort_cnt = 0;
   }
 
   virtual bool DoInsert();
   virtual bool DoTransaction();
 
-  virtual ~Client() {}
+  virtual ~Client() {
+    Client::total_abort_cnt += abort_cnt;
+  }
 
+  
+  static std::atomic<unsigned long> total_abort_cnt;
 protected:
   virtual int TransactionRead(Transaction *txn);
   virtual int TransactionReadModifyWrite(Transaction *txn);
@@ -49,6 +56,8 @@ protected:
   CoreWorkload &workload_;
   std::string key;
   std::vector<DB::KVPair> pairs;
+
+  unsigned long abort_cnt;
 };
 
 inline bool Client::DoInsert() {
@@ -101,6 +110,8 @@ inline bool Client::DoTransaction() {
   bool need_retry = db_.Commit(&txn) == DB::kErrorConflict;
 
   while (need_retry) {
+    ++abort_cnt;
+    
     db_.Begin(&txn);
 
     txn->SetAborted(false);

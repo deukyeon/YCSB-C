@@ -128,6 +128,8 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const uint64_t num_op
   return oks;
 }
 
+std::atomic<unsigned long> ycsbc::Client::total_abort_cnt = 0;
+
 int main(const int argc, const char *argv[]) {
   utils::Properties props;
   WorkloadProperties load_workload;
@@ -231,6 +233,8 @@ int main(const int argc, const char *argv[]) {
     cerr << "# Transaction throughput (KTPS)" << endl;
     cerr << props["dbname"] << '\t' << workload.filename << '\t' << num_threads << '\t';
     cerr << sum / run_duration / 1000 << endl;
+
+    cerr << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
   }
 
   delete db;
