@@ -64,7 +64,7 @@ std::map<string, string> default_props = {
     {"splinterdb.isolation_level", "1"},
 
     {"rocksdb.database_filename", "rocksdb.db"},
-    {"rocksdb.isolation_level", "3"},
+//    {"rocksdb.isolation_level", "3"},
 };
 
 void UsageMessage(const char *command);
@@ -224,7 +224,8 @@ int main(const int argc, const char *argv[]) {
     total_ops =
         stoi(workload.props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
     uint64_t ops_per_transactions =
-        stoi(workload.props[ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY]);
+      stoi(workload.props.GetProperty(ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
+				      ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
     timer.Start();
     {
       cerr << "# Transaction count:\t" << total_ops << endl;
