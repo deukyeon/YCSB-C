@@ -11,23 +11,23 @@
 
 #include "generator.h"
 
-#include <cassert>
-#include <vector>
-#include <random>
 #include "utils.h"
+#include <cassert>
+#include <random>
+#include <vector>
 
 namespace ycsbc {
 
-template <typename Value>
-class DiscreteGenerator : public Generator<Value> {
- public:
-  DiscreteGenerator(std::default_random_engine &gen) : generator_(gen), dist_(0.0, 1.0), sum_(0) { }
+template <typename Value> class DiscreteGenerator : public Generator<Value> {
+public:
+  DiscreteGenerator(std::default_random_engine &gen)
+      : generator_(gen), dist_(0.0, 1.0), sum_(0) {}
   void AddValue(Value value, double weight);
 
   Value Next();
   Value Last() { return last_; }
 
- private:
+private:
   std::default_random_engine &generator_;
   std::uniform_real_distribution<float> dist_;
   std::vector<std::pair<Value, double>> values_;
@@ -44,21 +44,30 @@ inline void DiscreteGenerator<Value>::AddValue(Value value, double weight) {
   sum_ += weight;
 }
 
-template <typename Value>
-inline Value DiscreteGenerator<Value>::Next() {
-  double chooser = dist_(generator_);
+// template <typename Value> inline Value DiscreteGenerator<Value>::Next() {
+//   double chooser = dist_(generator_);
 
-  for (auto p = values_.cbegin(); p != values_.cend(); ++p) {
-    if (chooser < p->second / sum_) {
-      return last_ = p->first;
-    }
-    chooser -= p->second / sum_;
-  }
-  
-  assert(false);
+//   for (auto p = values_.cbegin(); p != values_.cend(); ++p) {
+//     if (chooser < p->second / sum_) {
+//       return last_ = p->first;
+//     }
+//     chooser -= p->second / sum_;
+//   }
+
+//   assert(false);
+//   return last_;
+// }
+
+// XXX: This function is modified for the experimental purpose.
+// Don't merge to the main branch.
+// This returns a value in a round robin manner regardless of weight
+template <typename Value> inline Value DiscreteGenerator<Value>::Next() {
+  static unsigned long i = 0;
+  last_ = values_[i].first;
+  i = (i + 1) % values_.size();
   return last_;
 }
 
-} // ycsbc
+} // namespace ycsbc
 
 #endif // YCSB_C_DISCRETE_GENERATOR_H_
