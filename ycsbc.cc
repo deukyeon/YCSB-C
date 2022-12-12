@@ -40,7 +40,7 @@ std::map<string, string> default_props = {
     //
     {"splinterdb.filename", "splinterdb.db"},
     {"splinterdb.cache_size_mb", "4096"},
-    {"splinterdb.disk_size_gb", "128"},
+    {"splinterdb.disk_size_gb", "1024"},
 
     {"splinterdb.max_key_size", "24"},
     {"splinterdb.use_log", "1"},
@@ -48,7 +48,7 @@ std::map<string, string> default_props = {
     // All these options use splinterdb's internal defaults
     {"splinterdb.page_size", "0"},
     {"splinterdb.extent_size", "0"},
-    {"splinterdb.io_flags", "0"},
+    {"splinterdb.io_flags", "16450"}, // O_CREAT | O_RDWR | O_DIRECT
     {"splinterdb.io_perms", "0"},
     {"splinterdb.io_async_queue_depth", "0"},
     {"splinterdb.cache_use_stats", "0"},
