@@ -212,6 +212,7 @@ int main(const int argc, const char *argv[]) {
     cerr << props["dbname"] << '\t' << load_workload.filename << '\t'
          << num_threads << '\t';
     cerr << sum / load_duration / 1000 << endl;
+    cerr << "Load duration (sec):\t" << load_duration << endl;
   }
 
   // Perform any Run phases
@@ -255,7 +256,7 @@ int main(const int argc, const char *argv[]) {
     cerr << props["dbname"] << '\t' << workload.filename << '\t' << num_threads
          << '\t';
     cerr << sum / run_duration / 1000 << endl;
-
+    cerr << "Run duration (sec):\t" << run_duration << endl;
     cerr << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
   }
 
