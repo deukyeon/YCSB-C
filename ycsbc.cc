@@ -215,6 +215,8 @@ int main(const int argc, const char *argv[]) {
     cerr << "Load duration (sec):\t" << load_duration << endl;
   }
 
+  uint64_t ops_per_transactions = stoi(ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT);
+
   // Perform any Run phases
   for (unsigned int i = 0; i < run_workloads.size(); i++) {
     auto workload = run_workloads[i];
@@ -224,7 +226,7 @@ int main(const int argc, const char *argv[]) {
     actual_ops.clear();
     total_ops =
         stoi(workload.props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-    uint64_t ops_per_transactions =
+    ops_per_transactions =
       stoi(workload.props.GetProperty(ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
 				      ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
     timer.Start();
@@ -258,6 +260,7 @@ int main(const int argc, const char *argv[]) {
     cerr << sum / run_duration / 1000 << endl;
     cerr << "Run duration (sec):\t" << run_duration << endl;
     cerr << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
+    cerr << "Abort rate:\t" << (double)ycsbc::Client::total_abort_cnt / (ycsbc::Client::total_abort_cnt + total_ops / ops_per_transactions) << "\n";
   }
 
   delete db;

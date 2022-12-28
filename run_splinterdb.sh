@@ -4,19 +4,19 @@ if [[ "x$1" == "xsplinterdb" || "x$1" == "xtransactional_splinterdb" ]]
 then
   DB=$1
 else
-  echo "Usage: $0 [splinterdb|transactional_splinterdb] [(optional)label]"
+  echo "Usage: $0 [splinterdb|transactional_splinterdb] [(optional)fieldlength] [(optional)label]"
   exit 1
 fi
 
-LABEL=${2:-$DB}
+LABEL=${3:-$DB}
 
-FIELDLENGTH=1024
+FIELDLENGTH=${2:-1024}
 
 THREADS=(1 2 4 8 12 16 20 24 28 32)
 
 echo "Run for the uniform distribution"
 
-OUT=$LABEL-uniform.out
+OUT=~/$LABEL-uniform.out
 
 rm -f $OUT
 
@@ -25,7 +25,7 @@ do
   bash run_individual.sh $DB $t uniform $FIELDLENGTH >> $OUT 2>&1
 done
 
-OUT=$LABEL-zipf.out
+OUT=~/$LABEL-zipf.out
 
 rm -f $OUT
 
