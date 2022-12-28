@@ -79,6 +79,9 @@ const string CoreWorkload::OPERATION_COUNT_PROPERTY = "operationcount";
 const string CoreWorkload::OPS_PER_TRANSACTION_PROPERTY = "opspertransaction";
 const string CoreWorkload::OPS_PER_TRANSACTION_DEFAULT = "1";
 
+const string CoreWorkload::THETA_PROPERTY = "theta";
+const string CoreWorkload::THETA_DEFAULT = "0.99";
+
 void CoreWorkload::InitLoadWorkload(const utils::Properties &p, unsigned int nthreads, unsigned int this_thread, BatchedCounterGenerator *key_generator) {
   table_name_ = p.GetProperty(TABLENAME_PROPERTY,TABLENAME_DEFAULT);
   
@@ -150,8 +153,19 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
   }
   
   if (request_dist == "uniform") {
-    key_chooser_ = new UniformGenerator(generator_, 0, record_count_ - 1);
-    
+    // key_chooser_ = new UniformGenerator(generator_, 0, record_count_ - 1);
+
+
+    // ! Use zipfian with theta of 0, instead of the uniform generator
+    // If the number of keys changes, we don't want to change popular keys.
+    // So we construct the scrambled zipfian generator with a keyspace
+    // that is larger than what exists at the beginning of the test.
+    // If the generator picks a key that is not inserted yet, we just ignore it
+    // and pick another key.
+    int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
+    int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
+    uint64_t num_items = record_count_ + new_keys;
+    key_chooser_ = new ScrambledZipfianGenerator(generator_, 0, num_items - 1, 0);
   } else if (request_dist == "zipfian") {
     // If the number of keys changes, we don't want to change popular keys.
     // So we construct the scrambled zipfian generator with a keyspace
@@ -160,8 +174,10 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
     // and pick another key.
     int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
     int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
-    key_chooser_ = new ScrambledZipfianGenerator(generator_, record_count_ + new_keys);
-    
+    // key_chooser_ = new ScrambledZipfianGenerator(generator_, record_count_ + new_keys);
+    uint64_t num_items = record_count_ + new_keys;
+    double theta = std::stof(p.GetProperty(THETA_PROPERTY, THETA_DEFAULT));
+    key_chooser_ = new ScrambledZipfianGenerator(generator_, 0, num_items - 1, theta);
   } else if (request_dist == "latest") {
     key_chooser_ = new SkewedLatestGenerator(generator_, *key_generator_);
     

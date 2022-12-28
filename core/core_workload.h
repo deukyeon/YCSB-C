@@ -144,6 +144,9 @@ class CoreWorkload {
   static const std::string OPS_PER_TRANSACTION_PROPERTY;
   static const std::string OPS_PER_TRANSACTION_DEFAULT;
 
+  static const std::string THETA_PROPERTY;
+  static const std::string THETA_DEFAULT;
+
   ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
