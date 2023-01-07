@@ -156,11 +156,11 @@ inline bool Client::DoTransactionalOperations() {
 
   bool need_retry = false;
   do {
-    for (ClientOperation &client_op : operations_in_transaction) {
-      int status = -1;
-      Transaction *txn = NULL;
-      db_.Begin(&txn);
+    int status = -1;
+    Transaction *txn = NULL;
+    db_.Begin(&txn);
 
+    for (ClientOperation &client_op : operations_in_transaction) {
       switch (client_op.op) {
       case READ:
         status = TransactionRead(txn, client_op);
@@ -181,10 +181,10 @@ inline bool Client::DoTransactionalOperations() {
         throw utils::Exception("Operation request is not recognized!");
       }
       assert(status >= 0);
-      if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
-        ++abort_cnt;
-        break;
-      }
+    }
+
+    if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
+      ++abort_cnt;
     }
   } while (need_retry);
 
