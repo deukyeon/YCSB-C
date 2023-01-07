@@ -62,6 +62,8 @@ void OptimisticTransactionRocksDB::InitializeOptions(utils::Properties &props) {
 
 OptimisticTransactionRocksDB::OptimisticTransactionRocksDB(
     utils::Properties &props, bool preloaded) {
+  isTransactionSupported = true;
+
   InitializeOptions(props);
   std::string database_filename =
       props.GetProperty("rocksdb.database_filename");
@@ -97,11 +99,10 @@ int OptimisticTransactionRocksDB::Commit(Transaction **txn) {
   rocksdb::Transaction *txn_handle = ((RocksDBTransaction *)*txn)->handle;
   rocksdb::Status s = txn_handle->Commit();
   delete txn_handle;
+  delete *txn;
+  *txn = NULL;
 
   if (s.ok()) {
-    delete *txn;
-    *txn = NULL;
-
     return DB::kOK;
   }
 

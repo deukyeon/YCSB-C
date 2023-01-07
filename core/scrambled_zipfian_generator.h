@@ -12,6 +12,7 @@
 #include "generator.h"
 
 #include <cstdint>
+#include <random>
 #include "utils.h"
 #include "zipfian_generator.h"
 

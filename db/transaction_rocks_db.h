@@ -8,7 +8,6 @@
 
 #include "core/db.h"
 #include "core/properties.h"
-#include "core/transaction.h"
 #include "rocksdb/db.h"
 #include "rocksdb/utilities/optimistic_transaction_db.h"
 #include "rocksdb/utilities/transaction_db.h"

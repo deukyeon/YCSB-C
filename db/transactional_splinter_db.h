@@ -12,7 +12,6 @@
 
 #include "core/db.h"
 #include "core/properties.h"
-#include "core/transaction.h"
 
 extern "C" {
 #include "splinterdb/transaction.h"

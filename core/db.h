@@ -14,7 +14,7 @@
 
 namespace ycsbc {
 
-class Transaction;
+class Transaction {};
 
 class DB {
 public:
@@ -179,6 +179,13 @@ public:
                      const std::string &key) {
     return Delete(table, key);
   }
+
+  virtual inline bool IsTransactionSupported() const {
+    return isTransactionSupported;
+  }
+
+protected:
+  bool isTransactionSupported = false;
 };
 
 } // namespace ycsbc

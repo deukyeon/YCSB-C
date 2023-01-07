@@ -22,6 +22,7 @@ namespace ycsbc {
 TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
                                                  bool preloaded) {
   cout << "This is TransacionalSplinterDB\n";
+  isTransactionSupported = true;
 
   uint64_t max_key_size = props.GetIntProperty("splinterdb.max_key_size");
 
@@ -158,14 +159,15 @@ void TransactionalSplinterDB::Begin(Transaction **txn) {
 }
 
 int TransactionalSplinterDB::Commit(Transaction **txn) {
+  int ret = DB::kOK;
   transaction *txn_handle = &((SplinterDBTransaction *)*txn)->handle;
   if (transactional_splinterdb_commit(spl, txn_handle) < 0) {
-    return DB::kErrorConflict;
+    ret = DB::kErrorConflict;
   }
 
   delete *txn;
   *txn = NULL;
-  return DB::kOK;
+  return ret;
 }
 
 int TransactionalSplinterDB::Read(const std::string &table,

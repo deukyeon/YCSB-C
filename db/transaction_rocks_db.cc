@@ -67,6 +67,8 @@ void TransactionRocksDB::InitializeOptions(utils::Properties &props) {
 
 TransactionRocksDB::TransactionRocksDB(utils::Properties &props,
                                        bool preloaded) {
+  isTransactionSupported = true;
+
   InitializeOptions(props);
   std::string database_filename =
       props.GetProperty("rocksdb.database_filename");
@@ -100,26 +102,19 @@ void TransactionRocksDB::Begin(Transaction **txn) {
 int TransactionRocksDB::Commit(Transaction **txn) {
   rocksdb::Transaction *txn_handle = ((RocksDBTransaction *)*txn)->handle;
 
-  if ((*txn)->IsAborted()) {
-    if (isol_level == ROCKSDB_ISOLATION_LEVEL_SNAPSHOT_ISOLATION ||
-        isol_level == ROCKSDB_ISOLATION_LEVEL_MONOTONIC_ATOMIC_VIEW) {
-      txn_handle->RollbackToSavePoint();
-    }
-    rocksdb::Status s = txn_handle->Commit();
-    assert(s.ok());
-    delete txn_handle;
-    return DB::kErrorConflict;
-  }
+  // if ((*txn)->IsAborted()) {
+  //   if (isol_level == ROCKSDB_ISOLATION_LEVEL_SNAPSHOT_ISOLATION ||
+  //       isol_level == ROCKSDB_ISOLATION_LEVEL_MONOTONIC_ATOMIC_VIEW) {
+  //     txn_handle->RollbackToSavePoint();
+  //   }
+  //   rocksdb::Status s = txn_handle->Commit();
+  //   assert(s.ok());
+  //   delete txn_handle;
+  //   return DB::kErrorConflict;
+  // }
 
+  int ret = DB::kOK;
   rocksdb::Status s = txn_handle->Commit();
-  delete txn_handle;
-
-  if (s.ok()) {
-    delete *txn;
-    *txn = NULL;
-
-    return DB::kOK;
-  }
 
   if (s.IsBusy()) {
     if (isol_level == ROCKSDB_ISOLATION_LEVEL_SNAPSHOT_ISOLATION ||
@@ -127,11 +122,14 @@ int TransactionRocksDB::Commit(Transaction **txn) {
       txn_handle->Rollback();
     }
 
-    return DB::kErrorConflict;
+    ret = DB::kErrorConflict;
   }
 
-  // FIXME: this error type might not be correct
-  return DB::kErrorNotSupport;
+  delete txn_handle;
+  delete *txn;
+  *txn = NULL;
+
+  return ret;
 }
 
 int TransactionRocksDB::Read(Transaction *txn, const std::string &table,
