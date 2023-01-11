@@ -208,11 +208,11 @@ int main(const int argc, const char *argv[]) {
       }
     }
     double load_duration = timer.End();
-    cerr << "# Load throughput (KTPS)" << endl;
-    cerr << props["dbname"] << '\t' << load_workload.filename << '\t'
+    cout << "# Load throughput (KTPS)" << endl;
+    cout << props["dbname"] << '\t' << load_workload.filename << '\t'
          << num_threads << '\t';
-    cerr << sum / load_duration / 1000 << endl;
-    cerr << "Load duration (sec):\t" << load_duration << endl;
+    cout << sum / load_duration / 1000 << endl;
+    cout << "Load duration (sec):\t" << load_duration << endl;
   }
 
   uint64_t ops_per_transactions =
@@ -234,7 +234,7 @@ int main(const int argc, const char *argv[]) {
     }
     timer.Start();
     {
-      cerr << "# Transaction count:\t" << total_ops << endl;
+      cout << "# Transaction count:\t" << total_ops << endl;
       uint64_t run_progress = 0;
       uint64_t last_printed = 0;
       for (unsigned int i = 0; i < num_threads; ++i) {
@@ -257,13 +257,13 @@ int main(const int argc, const char *argv[]) {
     }
     double run_duration = timer.End();
 
-    cerr << "# Transaction throughput (KTPS)" << endl;
-    cerr << props["dbname"] << '\t' << workload.filename << '\t' << num_threads
+    cout << "# Transaction throughput (KTPS)" << endl;
+    cout << props["dbname"] << '\t' << workload.filename << '\t' << num_threads
          << '\t';
-    cerr << sum / run_duration / 1000 << endl;
-    cerr << "Run duration (sec):\t" << run_duration << endl;
-    cerr << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
-    cerr << "Abort rate:\t"
+    cout << sum / run_duration / 1000 << endl;
+    cout << "Run duration (sec):\t" << run_duration << endl;
+    cout << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
+    cout << "Abort rate:\t"
          << (double)ycsbc::Client::total_abort_cnt /
                 (ycsbc::Client::total_abort_cnt +
                  total_ops / ops_per_transactions)
