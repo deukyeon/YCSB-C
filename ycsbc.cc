@@ -187,7 +187,7 @@ int main(const int argc, const char *argv[]) {
   if (!load_workload.preloaded) {
     timer.Start();
     {
-      cerr << "# Loading records:\t" << record_count << endl;
+      cout << "# Loading records:\t" << record_count << endl;
       uint64_t load_progress = 0;
       uint64_t last_printed = 0;
       for (unsigned int i = 0; i < num_threads; ++i) {
