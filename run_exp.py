@@ -128,7 +128,7 @@ for i in range(0, num_repeats):
         logfile.write(f'{cmd}\n')
         popen = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
         popen.wait()
-        output = popen.stdout.read()
+        output = popen.stdout.read().decode()
         logfile.write(output)
     logfile.close()
     parseLogfile(log_path)

@@ -153,19 +153,7 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
   }
   
   if (request_dist == "uniform") {
-    // key_chooser_ = new UniformGenerator(generator_, 0, record_count_ - 1);
-
-
-    // ! Use zipfian with theta of 0, instead of the uniform generator
-    // If the number of keys changes, we don't want to change popular keys.
-    // So we construct the scrambled zipfian generator with a keyspace
-    // that is larger than what exists at the beginning of the test.
-    // If the generator picks a key that is not inserted yet, we just ignore it
-    // and pick another key.
-    int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
-    int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
-    uint64_t num_items = record_count_ + new_keys;
-    key_chooser_ = new ScrambledZipfianGenerator(generator_, 0, num_items - 1, 0);
+    key_chooser_ = new UniformGenerator(generator_, 0, record_count_ - 1);
   } else if (request_dist == "zipfian") {
     // If the number of keys changes, we don't want to change popular keys.
     // So we construct the scrambled zipfian generator with a keyspace
