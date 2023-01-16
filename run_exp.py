@@ -44,7 +44,7 @@ label = system + '-' + workload
 
 db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
 spec_file = 'workloads/' + workload + '.spec'
-num_txns_per_thread = 10000
+num_txns_per_thread = 1000
 ops_per_txn = 1
 
 specfile = open(spec_file, 'r')
@@ -112,14 +112,14 @@ def parseLogfile(logfile_path):
             abort_rates.append(fields[-1])
 
     # print csv
-    print("threads,load,workload,aborts")
+    print("threads,load,workload,aborts,abort_rate")
     for i in range(0, len(load_threads)):
         print(load_threads[i], load_tputs[i],
               run_tputs[i], abort_counts[i], abort_rates[i],
               sep=',')
 
 
-num_repeats = 5
+num_repeats = 1
 for i in range(0, num_repeats):
     log_path = f'/tmp/{label}.{i}.log'
     logfile = open(log_path, 'w')
