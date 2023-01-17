@@ -59,12 +59,7 @@ max_num_threads = min(os.cpu_count(), 32)
 cmds = []
 for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     operation_count = thread * num_txns_per_thread * ops_per_txn
-    cmd = './ycsbc'
-    cmd += ' -db ' + db
-    cmd += ' -threads ' + str(thread)
-    cmd += ' -L ' + spec_file
-    cmd += ' -W ' + spec_file
-    cmd += ' -w operationcount ' + str(operation_count)
+    cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w operationcount {operation_count}'
     cmds.append(cmd)
 
 
@@ -112,11 +107,9 @@ def parseLogfile(logfile_path):
             abort_rates.append(fields[-1])
 
     # print csv
-    print("threads,load,workload,aborts,abort_rate")
-    for i in range(0, len(load_threads)):
-        print(load_threads[i], load_tputs[i],
-              run_tputs[i], abort_counts[i], abort_rates[i],
-              sep=',')
+    print("system,threads,load,workload,aborts,abort_rate")
+    for tuple in zip(load_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
+        print(system, tuple, sep=',')
 
 
 num_repeats = 1
@@ -126,9 +119,12 @@ for i in range(0, num_repeats):
     logfile.writelines(specfile_data)
     for cmd in cmds:
         logfile.write(f'{cmd}\n')
-        popen = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE)
-        popen.wait()
-        output = popen.stdout.read().decode()
-        logfile.write(output)
+        sp = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        out, err = sp.communicate()
+        if out:
+            print(out)
+            logfile.write(out.decode())
+        if err:
+            print(err)
     logfile.close()
     parseLogfile(log_path)
