@@ -13,6 +13,25 @@ available_systems = [
     'fantastiCC'
 ]
 
+system_branch_map = {
+    'splinterdb': 'deukyeon/tictoc',
+    'tictoc-disk': 'deukyeon/tictoc',
+    'silo-disk': 'deukyeon/silo-disk',
+    'baseline-serial': 'deukyeon/baseline',
+    'baseline-parallel': 'deukyeon/baseline',
+    'silo-memory': 'deukyeon/fantastiCC',
+    'tictoc-cache-unlimit': 'deukyeon/fantastiCC',
+    'fantastiCC': 'deukyeon/fantastiCC'
+}
+
+system_sed_map = {
+    'baseline-parallel': ['sed', '-i', 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g', 'src/transaction_private.h'],
+    'silo-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g', 'src/experimental_mode.h'],
+    'tictoc-cache-unlimit': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g', 'src/experimental_mode.h']
+}
+
+systems_with_iceberg = ['fantastiCC', 'tictoc-cache-unlimit', 'silo-memory']
+
 available_workloads = [
     'high_contention',
     'medium_contention',
@@ -28,42 +47,39 @@ def printHelp():
           available_workloads, file=sys.stderr)
     exit(1)
 
-
-if len(sys.argv) < 2:
-    printHelp()
-
-system = sys.argv[1]
-if system not in available_systems:
-    printHelp()
-
-workload = sys.argv[2]
-if workload not in available_workloads:
-    printHelp()
-
-label = system + '-' + workload
-
-db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
-spec_file = 'workloads/' + workload + '.spec'
-num_txns_per_thread = 1000
-ops_per_txn = 1
-
-specfile = open(spec_file, 'r')
-specfile_data = specfile.readlines()
-for line in specfile_data:
-    if line.startswith('opspertransaction'):
-        ops_per_txn = int(line.split(sep='=')[-1])
-specfile.close()
-
-max_num_threads = min(os.cpu_count(), 32)
-
-cmds = []
-for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
-    operation_count = thread * num_txns_per_thread * ops_per_txn
-    cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w operationcount {operation_count}'
-    cmds.append(cmd)
+    
+def run_shell_command(cmd, parse=True):
+    if parse:
+        cmd = cmd.split()
+    sp = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    out, err = sp.communicate()
+    if out:
+        print(out.decode())
+    if err:
+        print(err.decode(), file=sys.stderr)
+    return out, err
 
 
-def parseLogfile(logfile_path):
+def buildSystem(sys):
+    current_dir = os.getcwd()
+    splinterdb_dir = '../splinterdb'
+    os.chdir(splinterdb_dir)
+    run_shell_command('git checkout -- .')
+    run_shell_command(f'git checkout {system_branch_map[sys]}')
+    if sys in systems_with_iceberg:
+        run_shell_command('git submodule update --init --recursive third-party')
+        run_shell_command('make -C third-party/iceberghashtable clean')
+        run_shell_command('make -C third-party/iceberghashtable')
+    run_shell_command('make clean')
+    if sys in system_sed_map:
+        run_shell_command(system_sed_map[sys], parse=False)
+    run_shell_command('make')
+    os.chdir(current_dir)
+    run_shell_command('make clean')
+    run_shell_command('make')
+
+
+def parseLogfile(logfile_path, csv, system, seq):
     f = open(logfile_path, "r")
     lines = f.readlines()
     f.close()
@@ -107,24 +123,61 @@ def parseLogfile(logfile_path):
             abort_rates.append(fields[-1])
 
     # print csv
-    print("system,threads,load,workload,aborts,abort_rate")
     for tuple in zip(load_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
-        print(system, tuple, sep=',')
+        print(system, ','.join(tuple), seq, sep=',', file=csv)
 
+def main(argc, argv):
+    if argc < 2:
+        printHelp()
 
-num_repeats = 1
-for i in range(0, num_repeats):
-    log_path = f'/tmp/{label}.{i}.log'
-    logfile = open(log_path, 'w')
-    logfile.writelines(specfile_data)
-    for cmd in cmds:
-        logfile.write(f'{cmd}\n')
-        sp = subprocess.Popen(cmd.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        out, err = sp.communicate()
-        if out:
-            print(out)
-            logfile.write(out.decode())
-        if err:
-            print(err)
-    logfile.close()
-    parseLogfile(log_path)
+    system = argv[1]
+    if system not in available_systems:
+        printHelp()
+
+    workload = argv[2]
+    if workload not in available_workloads:
+        printHelp()
+
+    buildSystem(system)
+    
+    label = system + '-' + workload
+
+    db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
+    spec_file = 'workloads/' + workload + '.spec'
+    num_txns_per_thread = 100000
+    ops_per_txn = 1
+
+    specfile = open(spec_file, 'r')
+    specfile_data = specfile.readlines()
+    for line in specfile_data:
+        if line.startswith('opspertransaction'):
+            ops_per_txn = int(line.split(sep='=')[-1])
+            specfile.close()
+
+    max_num_threads = min(os.cpu_count(), 32)
+
+    cmds = []
+    for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
+        operation_count = thread * num_txns_per_thread * ops_per_txn
+        cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w operationcount {operation_count}'
+        cmds.append(cmd)
+
+    csv = open(f'{label}.csv', 'w')
+    print("system,threads,load,workload,aborts,abort_rate,seq", file=csv)
+    num_repeats = 5
+    for i in range(0, num_repeats):
+        log_path = f'/tmp/{label}.{i}.log'
+        logfile = open(log_path, 'w')
+        logfile.writelines(specfile_data)
+        for cmd in cmds:
+            logfile.write(f'{cmd}\n')
+            out, _ = run_shell_command(cmd)
+            if out:
+                logfile.write(out.decode())
+            run_shell_command('rm -f splinterdb.db')
+        logfile.close()
+        parseLogfile(log_path, csv, system, i)
+    csv.close()
+
+if __name__ == '__main__':
+    main(len(sys.argv), sys.argv)
