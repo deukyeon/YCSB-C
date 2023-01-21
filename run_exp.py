@@ -170,6 +170,7 @@ def main(argc, argv):
         logfile = open(log_path, 'w')
         logfile.writelines(specfile_data)
         for cmd in cmds:
+            run_shell_command('fallocate -l 150GB splinterdb.db')
             logfile.write(f'{cmd}\n')
             out, _ = run_shell_command(cmd)
             if out:
