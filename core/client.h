@@ -9,12 +9,16 @@
 #ifndef YCSB_C_CLIENT_H_
 #define YCSB_C_CLIENT_H_
 
+#include "core/timer.h"
 #include "core_workload.h"
 #include "db.h"
+#include "stats_recorder.h"
 #include "utils.h"
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <iostream>
+#include <pthread.h>
 #include <string>
 #include <thread>
 
@@ -35,15 +39,17 @@ public:
     workload_.InitKeyBuffer(key);
     workload_.InitPairs(pairs);
 
-    abort_cnt = 0;
+    // abort_cnt = 0;
   }
 
   virtual bool DoInsert();
   virtual bool DoTransaction();
 
-  virtual ~Client() { Client::total_abort_cnt += abort_cnt; }
+  virtual ~Client() { 
+    // Client::total_abort_cnt += abort_cnt; 
+  }
 
-  static std::atomic<unsigned long> total_abort_cnt;
+  // static std::atomic<unsigned long> total_abort_cnt;
 
 protected:
   virtual bool DoOperation();
@@ -97,9 +103,13 @@ inline bool Client::DoTransaction() {
 }
 
 inline bool Client::DoOperation() {
+  utils::Timer<double> timer;
+
   int status = -1;
 
   ClientOperation client_op;
+
+  timer.Start();
 
   switch (workload_.NextOperation()) {
   case READ:
@@ -127,10 +137,21 @@ inline bool Client::DoOperation() {
   }
   assert(status >= 0);
 
+  double latency = timer.End();
+
+  size_t stat_id = StatsRecorder<double>::getInstance()->getNextStatId();
+  StatsRecorder<double>::getInstance()->recordLatency(stat_id, latency);
+
   return true;
 }
 
 inline bool Client::DoTransactionalOperations() {
+  utils::Timer<double> timer;
+
+  size_t stat_id = StatsRecorder<double>::getInstance()->getNextStatId();
+
+  timer.Start();
+
   for (int i = 0; i < workload_.ops_per_transaction(); ++i) {
     ClientOperation client_op;
 
@@ -157,11 +178,16 @@ inline bool Client::DoTransactionalOperations() {
     operations_in_transaction.emplace_back(client_op);
   }
 
+  double latency = timer.End();
+
   bool need_retry = false;
   int retry = 0;
   do {
     int status = -1;
     Transaction *txn = NULL;
+
+    timer.Start();
+
     db_.Begin(&txn);
 
     for (ClientOperation &client_op : operations_in_transaction) {
@@ -187,14 +213,21 @@ inline bool Client::DoTransactionalOperations() {
       assert(status >= 0);
     }
 
-    if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
-      ++abort_cnt;
+    int ret = db_.Commit(&txn);
+
+    double time_for_txn = timer.End();
+
+    if ((need_retry = (ret == DB::kErrorConflict))) {
       const int sleep_for =
           std::min((int)std::pow(2.0, (float)retry++), workload_.max_txn_retry_ms());
       std::this_thread::sleep_for(std::chrono::milliseconds(sleep_for));
+      StatsRecorder<double>::getInstance()->recordAbortTime(stat_id, time_for_txn);
     }
+
+    latency += time_for_txn;
   } while (need_retry);
 
+  StatsRecorder<double>::getInstance()->recordLatency(stat_id, latency);
   operations_in_transaction.clear();
 
   return true;

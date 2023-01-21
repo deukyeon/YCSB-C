@@ -8,6 +8,7 @@
 
 #include "core/client.h"
 #include "core/core_workload.h"
+#include "core/stats_recorder.h"
 #include "core/timer.h"
 #include "core/utils.h"
 #include "db/db_factory.h"
@@ -39,7 +40,7 @@ std::map<string, string> default_props = {
     // splinterdb config defaults
     //
     {"splinterdb.filename", "splinterdb.db"},
-    {"splinterdb.cache_size_mb", "4096"},
+    {"splinterdb.cache_size_mb", "1024"},
     {"splinterdb.disk_size_gb", "1024"},
 
     {"splinterdb.max_key_size", "24"},
@@ -140,7 +141,9 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl,
   return oks;
 }
 
-std::atomic<unsigned long> ycsbc::Client::total_abort_cnt = 0;
+// std::atomic<unsigned long> ycsbc::Client::total_abort_cnt = 0;
+template <typename T>
+ycsbc::StatsRecorder<T> *ycsbc::StatsRecorder<T>::instance = nullptr;
 
 int main(const int argc, const char *argv[]) {
   utils::Properties props;
@@ -232,9 +235,13 @@ int main(const int argc, const char *argv[]) {
           ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
           ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
     }
+
+
+    ycsbc::StatsRecorder<double>::init(total_ops / ops_per_transactions);
+
     timer.Start();
     {
-      cout << "# Transaction count:\t" << total_ops << endl;
+      cout << "# Operation count:\t" << total_ops << endl;
       uint64_t run_progress = 0;
       uint64_t last_printed = 0;
       for (unsigned int i = 0; i < num_threads; ++i) {
@@ -257,17 +264,38 @@ int main(const int argc, const char *argv[]) {
     }
     double run_duration = timer.End();
 
+    cout << "# Transaction count:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()
+                ->getTotalNumberOfTransactions()
+         << endl;
     cout << "# Transaction throughput (KTPS)" << endl;
     cout << props["dbname"] << '\t' << workload.filename << '\t' << num_threads
          << '\t';
-    cout << sum / run_duration / 1000 << endl;
+    cout << ycsbc::StatsRecorder<double>::getInstance()
+                    ->getTotalNumberOfTransactions() /
+                1000.0 / run_duration
+         << endl;
     cout << "Run duration (sec):\t" << run_duration << endl;
-    cout << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
-    cout << "Abort rate:\t"
-         << (double)ycsbc::Client::total_abort_cnt /
-                (ycsbc::Client::total_abort_cnt +
-                 total_ops / ops_per_transactions)
+    cout << "# Abort count:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()->getTotalAbortCount()
+         << '\n';
+    cout << "Avg. Abort count:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()->getAverageAbortCount()
          << "\n";
+    cout << "Abort rate:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()->getAbortRate() << "\n";
+
+    cout << "Avg. latency of transaction:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()->getAverageLatency()
+         << "\n";
+    cout << "Avg. Abort count:\t"
+         << ycsbc::StatsRecorder<double>::getInstance()->getAverageAbortTime()
+         << "\n";
+    fstream csv_file("txn_stats.csv", std::fstream::out);
+    // ycsbc::StatsRecorder<double>::getInstance()->printSummary();
+    ycsbc::StatsRecorder<double>::getInstance()->printAllStatsAsCSV(csv_file);
+
+    ycsbc::StatsRecorder<double>::deinit();
   }
 
   delete db;
