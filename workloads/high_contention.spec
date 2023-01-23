@@ -10,3 +10,4 @@ scanproportion=0
 insertproportion=0
 theta=0.9
 opspertransaction=16
+operationcount=10000000
