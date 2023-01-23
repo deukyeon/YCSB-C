@@ -47,7 +47,7 @@ def printHelp():
           available_workloads, file=sys.stderr)
     exit(1)
 
-    
+
 def run_shell_command(cmd, parse=True):
     if parse:
         cmd = cmd.split()
@@ -139,27 +139,17 @@ def main(argc, argv):
         printHelp()
 
     buildSystem(system)
-    
+
     label = system + '-' + workload
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
     spec_file = 'workloads/' + workload + '.spec'
-    num_txns_per_thread = 100000
-    ops_per_txn = 1
-
-    specfile = open(spec_file, 'r')
-    specfile_data = specfile.readlines()
-    for line in specfile_data:
-        if line.startswith('opspertransaction'):
-            ops_per_txn = int(line.split(sep='=')[-1])
-            specfile.close()
 
     max_num_threads = min(os.cpu_count(), 32)
 
     cmds = []
     for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
-        operation_count = thread * num_txns_per_thread * ops_per_txn
-        cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w operationcount {operation_count}'
+        cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
         cmds.append(cmd)
 
     csv = open(f'{label}.csv', 'w')
@@ -168,7 +158,11 @@ def main(argc, argv):
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
         logfile = open(log_path, 'w')
-        logfile.writelines(specfile_data)
+
+        specfile = open(spec_file, 'r')
+        logfile.writelines(specfile.readlines())
+        specfile.close()
+
         for cmd in cmds:
             run_shell_command('fallocate -l 150GB splinterdb.db')
             logfile.write(f'{cmd}\n')
