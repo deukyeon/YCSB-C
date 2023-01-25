@@ -13,7 +13,10 @@
 #include "db.h"
 #include "utils.h"
 #include <atomic>
+#include <chrono>
+#include <cmath>
 #include <string>
+#include <thread>
 
 namespace ycsbc {
 
@@ -155,6 +158,7 @@ inline bool Client::DoTransactionalOperations() {
   }
 
   bool need_retry = false;
+  int retry = 0;
   do {
     int status = -1;
     Transaction *txn = NULL;
@@ -185,6 +189,9 @@ inline bool Client::DoTransactionalOperations() {
 
     if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
       ++abort_cnt;
+      const int sleep_for =
+          std::min((int)std::pow(2.0, (float)retry++), workload_.max_txn_retry_ms());
+      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_for));
     }
   } while (need_retry);
 

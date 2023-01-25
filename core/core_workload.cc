@@ -82,6 +82,9 @@ const string CoreWorkload::OPS_PER_TRANSACTION_DEFAULT = "1";
 const string CoreWorkload::THETA_PROPERTY = "theta";
 const string CoreWorkload::THETA_DEFAULT = "0.99";
 
+const string CoreWorkload::MAX_TXN_RETRY_MS_PROPERTY = "maxtxnretryus";
+const string CoreWorkload::MAX_TXN_RETRY_MS_DEFAULT = "1000";
+
 void CoreWorkload::InitLoadWorkload(const utils::Properties &p, unsigned int nthreads, unsigned int this_thread, BatchedCounterGenerator *key_generator) {
   table_name_ = p.GetProperty(TABLENAME_PROPERTY,TABLENAME_DEFAULT);
   
@@ -187,6 +190,7 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
   //batch_size_ = 1;
   
   ops_per_transaction_ = std::stoi(p.GetProperty(OPS_PER_TRANSACTION_PROPERTY, OPS_PER_TRANSACTION_DEFAULT));
+  max_txn_retry_ms_ = std::stoi(p.GetProperty(MAX_TXN_RETRY_MS_PROPERTY, MAX_TXN_RETRY_MS_DEFAULT));
 }
 
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(

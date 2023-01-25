@@ -147,6 +147,9 @@ class CoreWorkload {
   static const std::string THETA_PROPERTY;
   static const std::string THETA_DEFAULT;
 
+  static const std::string MAX_TXN_RETRY_MS_PROPERTY;
+  static const std::string MAX_TXN_RETRY_MS_DEFAULT;
+
   ///
   /// Initialize the scenario.
   /// Called once, in the main client thread, before any operations are started.
@@ -171,6 +174,7 @@ class CoreWorkload {
   bool read_all_fields() const { return read_all_fields_; }
   bool write_all_fields() const { return write_all_fields_; }
   int ops_per_transaction() const { return ops_per_transaction_; }
+  int max_txn_retry_ms() const { return max_txn_retry_ms_; }
 
   CoreWorkload() :
       generator_(),
@@ -222,6 +226,7 @@ class CoreWorkload {
   size_t record_count_;
   int zero_padding_;
   int ops_per_transaction_;
+  int max_txn_retry_ms_;
   std::uniform_int_distribution<char> uniform_letter_dist_;
 };
 
