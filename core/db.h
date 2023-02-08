@@ -14,7 +14,10 @@
 
 namespace ycsbc {
 
-class Transaction {};
+class Transaction {
+public:
+  virtual ~Transaction() {};
+};
 
 class DB {
 public:

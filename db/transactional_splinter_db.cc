@@ -13,6 +13,7 @@ extern "C" {
 
 #include <string>
 #include <vector>
+#include <cstring>
 
 using std::string;
 using std::vector;
@@ -27,6 +28,7 @@ TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
   uint64_t max_key_size = props.GetIntProperty("splinterdb.max_key_size");
 
   default_data_config_init(max_key_size, &data_cfg);
+  memset(&splinterdb_cfg, 0, sizeof(splinterdb_cfg));
   splinterdb_cfg.filename = props.GetProperty("splinterdb.filename").c_str();
   splinterdb_cfg.cache_size =
       props.GetIntProperty("splinterdb.cache_size_mb") * 1024 * 1024;
@@ -151,9 +153,8 @@ int TransactionalSplinterDB::Delete(Transaction *txn, const string &table,
 }
 
 void TransactionalSplinterDB::Begin(Transaction **txn) {
-  if (*txn == NULL) {
-    *txn = new SplinterDBTransaction();
-  }
+  assert(*txn == NULL);
+  *txn = new SplinterDBTransaction();
   transaction *txn_handle = &((SplinterDBTransaction *)*txn)->handle;
   transactional_splinterdb_begin(spl, txn_handle);
 }
