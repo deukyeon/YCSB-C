@@ -68,8 +68,6 @@ def buildSystem(sys):
     run_shell_command(f'git checkout {system_branch_map[sys]}')
     if sys in systems_with_iceberg:
         run_shell_command('git submodule update --init --recursive third-party')
-        run_shell_command('make -C third-party/iceberghashtable clean')
-        run_shell_command('make -C third-party/iceberghashtable')
     run_shell_command('make clean')
     if sys in system_sed_map:
         run_shell_command(system_sed_map[sys], parse=False)
