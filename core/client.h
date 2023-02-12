@@ -15,6 +15,7 @@
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <iostream>
 #include <string>
 #include <thread>
 
@@ -27,6 +28,10 @@ struct ClientOperation {
   size_t len;
   std::vector<std::string> read_fields;
   std::vector<DB::KVPair> values;
+
+  inline bool operator==(const ClientOperation &other) const {
+    return table == other.table && key == other.key && op == other.op;
+  }
 };
 
 class Client {
@@ -41,7 +46,10 @@ public:
   virtual bool DoInsert();
   virtual bool DoTransaction();
 
-  virtual ~Client() { Client::total_abort_cnt += abort_cnt; }
+  virtual ~Client() {
+    // std::cout << abort_cnt << "\n";
+    Client::total_abort_cnt += abort_cnt;
+  }
 
   static std::atomic<unsigned long> total_abort_cnt;
 
@@ -132,9 +140,12 @@ inline bool Client::DoOperation() {
 
 inline bool Client::DoTransactionalOperations() {
   for (int i = 0; i < workload_.ops_per_transaction(); ++i) {
+    Operation op = workload_.NextOperation();
+
+  RETRY : {
     ClientOperation client_op;
 
-    switch (workload_.NextOperation()) {
+    switch (op) {
     case READ:
       GenerateClientOperationRead(client_op);
       break;
@@ -153,9 +164,21 @@ inline bool Client::DoTransactionalOperations() {
     default:
       throw utils::Exception("Operation request is not recognized!");
     }
-
+    const bool same_op_exist =
+        std::find(operations_in_transaction.begin(),
+                  operations_in_transaction.end(),
+                  client_op) != operations_in_transaction.end();
+    if (same_op_exist) {
+      goto RETRY;
+    }
     operations_in_transaction.emplace_back(client_op);
   }
+  }
+
+  // for (auto &op : operations_in_transaction) {
+  //   std::cout << op.key << std::endl;
+  // }
+  // std::cout << "---" << std::endl;
 
   bool need_retry = false;
   int retry = 0;
@@ -190,7 +213,8 @@ inline bool Client::DoTransactionalOperations() {
     if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
       ++abort_cnt;
       const int sleep_for =
-          std::min((int)std::pow(2.0, (float)retry++), workload_.max_txn_retry_ms());
+          std::min((int)std::pow(2.0, (float)retry++),
+          workload_.max_txn_retry_ms());
       std::this_thread::sleep_for(std::chrono::milliseconds(sleep_for));
     }
   } while (need_retry);
