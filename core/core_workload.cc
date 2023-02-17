@@ -22,7 +22,7 @@ const string CoreWorkload::TABLENAME_PROPERTY = "table";
 const string CoreWorkload::TABLENAME_DEFAULT = "usertable";
 
 const string CoreWorkload::FIELD_COUNT_PROPERTY = "fieldcount";
-const string CoreWorkload::FIELD_COUNT_DEFAULT = "10";
+const string CoreWorkload::FIELD_COUNT_DEFAULT = "1";
 
 const string CoreWorkload::FIELD_LENGTH_DISTRIBUTION_PROPERTY =
     "field_len_dist";
@@ -38,10 +38,10 @@ const string CoreWorkload::WRITE_ALL_FIELDS_PROPERTY = "writeallfields";
 const string CoreWorkload::WRITE_ALL_FIELDS_DEFAULT = "false";
 
 const string CoreWorkload::READ_PROPORTION_PROPERTY = "readproportion";
-const string CoreWorkload::READ_PROPORTION_DEFAULT = "0.95";
+const string CoreWorkload::READ_PROPORTION_DEFAULT = "0.9";
 
 const string CoreWorkload::UPDATE_PROPORTION_PROPERTY = "updateproportion";
-const string CoreWorkload::UPDATE_PROPORTION_DEFAULT = "0.05";
+const string CoreWorkload::UPDATE_PROPORTION_DEFAULT = "0.1";
 
 const string CoreWorkload::INSERT_PROPORTION_PROPERTY = "insertproportion";
 const string CoreWorkload::INSERT_PROPORTION_DEFAULT = "0.0";
@@ -55,7 +55,7 @@ const string CoreWorkload::READMODIFYWRITE_PROPORTION_DEFAULT = "0.0";
 
 const string CoreWorkload::REQUEST_DISTRIBUTION_PROPERTY =
     "requestdistribution";
-const string CoreWorkload::REQUEST_DISTRIBUTION_DEFAULT = "uniform";
+const string CoreWorkload::REQUEST_DISTRIBUTION_DEFAULT = "zipfian";
 
 const string CoreWorkload::ZERO_PADDING_PROPERTY = "zeropadding";
 const string CoreWorkload::ZERO_PADDING_DEFAULT = "20";
@@ -80,10 +80,16 @@ const string CoreWorkload::OPS_PER_TRANSACTION_PROPERTY = "opspertransaction";
 const string CoreWorkload::OPS_PER_TRANSACTION_DEFAULT = "1";
 
 const string CoreWorkload::THETA_PROPERTY = "theta";
-const string CoreWorkload::THETA_DEFAULT = "0.99";
+const string CoreWorkload::THETA_DEFAULT = "0.8";
 
-const string CoreWorkload::MAX_TXN_RETRY_MS_PROPERTY = "maxtxnretryus";
-const string CoreWorkload::MAX_TXN_RETRY_MS_DEFAULT = "1000";
+const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_PROPERTY = "maxtxnabortpaneltyus";
+const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_DEFAULT = "100";
+
+const string CoreWorkload::MAX_TXN_RETRY_PROPERTY = "maxtxnretry";
+const string CoreWorkload::MAX_TXN_RETRY_DEFAULT = "10";
+
+ const std::string CoreWorkload::MAX_TXN_COUNT_PROPERTY = "maxtxncount";
+ const std::string CoreWorkload::MAX_TXN_COUNT_DEFAULT = "0";
 
 void CoreWorkload::InitLoadWorkload(const utils::Properties &p, unsigned int nthreads, unsigned int this_thread, BatchedCounterGenerator *key_generator) {
   table_name_ = p.GetProperty(TABLENAME_PROPERTY,TABLENAME_DEFAULT);
@@ -138,7 +144,13 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
                                                     READ_ALL_FIELDS_DEFAULT));
   write_all_fields_ = utils::StrToBool(p.GetProperty(WRITE_ALL_FIELDS_PROPERTY,
                                                      WRITE_ALL_FIELDS_DEFAULT));
+                                                     
+  ops_per_transaction_ = std::stoi(p.GetProperty(OPS_PER_TRANSACTION_PROPERTY, OPS_PER_TRANSACTION_DEFAULT));
   
+  max_txn_abort_panelty_us_ = std::stoi(p.GetProperty(MAX_TXN_ABORT_PANELTY_US_PROPERTY, MAX_TXN_ABORT_PANELTY_US_DEFAULT));
+  max_txn_retry_ = std::stoi(p.GetProperty(MAX_TXN_RETRY_PROPERTY, MAX_TXN_RETRY_DEFAULT));
+  max_txn_count_ = std::stoul(p.GetProperty(MAX_TXN_COUNT_PROPERTY, MAX_TXN_COUNT_DEFAULT));
+
   if (read_proportion > 0) {
     op_chooser_.AddValue(READ, read_proportion);
   }
@@ -163,7 +175,12 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
     // that is larger than what exists at the beginning of the test.
     // If the generator picks a key that is not inserted yet, we just ignore it
     // and pick another key.
-    int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
+    int op_count;
+    if (max_txn_count_ > 0) {
+      op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY, p.GetProperty(RECORD_COUNT_PROPERTY))) * ops_per_transaction_;
+    } else {
+      op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
+    }
     int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
     // key_chooser_ = new ScrambledZipfianGenerator(generator_, record_count_ + new_keys);
     uint64_t num_items = record_count_ + new_keys;
@@ -188,9 +205,6 @@ void CoreWorkload::InitRunWorkload(const utils::Properties &p, unsigned int nthr
   }
 
   //batch_size_ = 1;
-  
-  ops_per_transaction_ = std::stoi(p.GetProperty(OPS_PER_TRANSACTION_PROPERTY, OPS_PER_TRANSACTION_DEFAULT));
-  max_txn_retry_ms_ = std::stoi(p.GetProperty(MAX_TXN_RETRY_MS_PROPERTY, MAX_TXN_RETRY_MS_DEFAULT));
 }
 
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(

@@ -147,8 +147,14 @@ class CoreWorkload {
   static const std::string THETA_PROPERTY;
   static const std::string THETA_DEFAULT;
 
-  static const std::string MAX_TXN_RETRY_MS_PROPERTY;
-  static const std::string MAX_TXN_RETRY_MS_DEFAULT;
+  static const std::string MAX_TXN_ABORT_PANELTY_US_PROPERTY;
+  static const std::string MAX_TXN_ABORT_PANELTY_US_DEFAULT;
+
+  static const std::string MAX_TXN_RETRY_PROPERTY;
+  static const std::string MAX_TXN_RETRY_DEFAULT;
+
+  static const std::string MAX_TXN_COUNT_PROPERTY;
+  static const std::string MAX_TXN_COUNT_DEFAULT;
 
   ///
   /// Initialize the scenario.
@@ -174,7 +180,9 @@ class CoreWorkload {
   bool read_all_fields() const { return read_all_fields_; }
   bool write_all_fields() const { return write_all_fields_; }
   int ops_per_transaction() const { return ops_per_transaction_; }
-  int max_txn_retry_ms() const { return max_txn_retry_ms_; }
+  int max_txn_abort_panelty_us() const { return max_txn_abort_panelty_us_; }
+  int max_txn_retry() const { return max_txn_retry_; }
+  unsigned long max_txn_count() const { return max_txn_count_; }
 
   CoreWorkload() :
       generator_(),
@@ -226,7 +234,9 @@ class CoreWorkload {
   size_t record_count_;
   int zero_padding_;
   int ops_per_transaction_;
-  int max_txn_retry_ms_;
+  int max_txn_abort_panelty_us_;
+  int max_txn_retry_;
+  unsigned long max_txn_count_;
   std::uniform_int_distribution<char> uniform_letter_dist_;
 };
 

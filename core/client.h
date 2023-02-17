@@ -36,20 +36,26 @@ struct ClientOperation {
 
 class Client {
 public:
-  Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) {
+  Client(int id, DB &db, CoreWorkload &wl) : id_(id), db_(db), workload_(wl) {
     workload_.InitKeyBuffer(key);
     workload_.InitPairs(pairs);
 
     abort_cnt = 0;
+    txn_cnt = 0;
+    
+    srand48_r(id, &drand_buffer);
   }
 
   virtual bool DoInsert();
   virtual bool DoTransaction();
 
   virtual ~Client() {
-    // std::cout << abort_cnt << "\n";
-    Client::total_abort_cnt += abort_cnt;
+    Client::total_abort_cnt.fetch_add(abort_cnt);
   }
+
+  // getters for txn_cnt and abort_cnt
+  int GetTxnCnt() const { return txn_cnt; }
+  int GetAbortCnt() const { return abort_cnt; }
 
   static std::atomic<unsigned long> total_abort_cnt;
 
@@ -71,6 +77,8 @@ protected:
   virtual void GenerateClientOperationUpdate(ClientOperation &client_op);
   virtual void GenerateClientOperationInsert(ClientOperation &client_op);
 
+  int id_;
+
   DB &db_;
   CoreWorkload &workload_;
   std::string key;
@@ -78,6 +86,8 @@ protected:
 
   std::vector<ClientOperation> operations_in_transaction;
   unsigned long abort_cnt;
+  unsigned long txn_cnt;
+  drand48_data drand_buffer;
 };
 
 inline bool Client::DoInsert() {
@@ -212,16 +222,23 @@ inline bool Client::DoTransactionalOperations() {
 
     if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
       ++abort_cnt;
-      const int sleep_for =
-          std::min((int)std::pow(2.0, (float)retry++),
-          workload_.max_txn_retry_ms());
-      std::this_thread::sleep_for(std::chrono::milliseconds(sleep_for));
+      // const int sleep_for =
+      //     std::min((int)std::pow(2.0, (float)retry++),
+      //     workload_.max_txn_retry_ms());
+      //      srand(time(NULL));
+      ++retry;
+      double r = 0;
+      drand48_r(&drand_buffer, &r);
+      const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
+      std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+    } else {
+      ++txn_cnt;
     }
-  } while (need_retry);
+  } while (need_retry && retry <= workload_.max_txn_retry());
 
   operations_in_transaction.clear();
 
-  return true;
+  return !need_retry;
 }
 
 inline int Client::TransactionRead(Transaction *txn,
