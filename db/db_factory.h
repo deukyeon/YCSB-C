@@ -15,11 +15,11 @@
 namespace ycsbc {
 
 class DBFactory {
- public:
-  static DB* CreateDB(utils::Properties &props, bool preloaded);
+public:
+   static DB *
+   CreateDB(utils::Properties &props, bool preloaded);
 };
 
-} // ycsbc
+} // namespace ycsbc
 
 #endif // YCSB_C_DB_FACTORY_H_
-

@@ -23,35 +23,46 @@ namespace ycsbc {
 
 class SplinterDB : public DB {
 public:
-  SplinterDB(utils::Properties &props, bool preloaded);
-  ~SplinterDB();
+   SplinterDB(utils::Properties &props, bool preloaded);
+   ~SplinterDB();
 
-  void Init();
-  void Close();
+   void
+   Init();
+   void
+   Close();
 
-  int Read(const std::string &table, const std::string &key,
-           const std::vector<std::string> *fields,
-           std::vector<KVPair> &result);
+   int
+   Read(const std::string              &table,
+        const std::string              &key,
+        const std::vector<std::string> *fields,
+        std::vector<KVPair>            &result);
 
-  int Scan(const std::string &table, const std::string &key,
-           int len, const std::vector<std::string> *fields,
-           std::vector<std::vector<KVPair>> &result);
+   int
+   Scan(const std::string                &table,
+        const std::string                &key,
+        int                               len,
+        const std::vector<std::string>   *fields,
+        std::vector<std::vector<KVPair>> &result);
 
-  int Update(const std::string &table, const std::string &key,
-             std::vector<KVPair> &values);
+   int
+   Update(const std::string   &table,
+          const std::string   &key,
+          std::vector<KVPair> &values);
 
-  int Insert(const std::string &table, const std::string &key,
-             std::vector<KVPair> &values);
+   int
+   Insert(const std::string   &table,
+          const std::string   &key,
+          std::vector<KVPair> &values);
 
-  int Delete(const std::string &table, const std::string &key);
+   int
+   Delete(const std::string &table, const std::string &key);
 
 private:
-  splinterdb_config         splinterdb_cfg;
-  data_config               data_cfg;
-  splinterdb               *spl;
+   splinterdb_config splinterdb_cfg;
+   data_config       data_cfg;
+   splinterdb       *spl;
 };
 
-} // ycsbc
+} // namespace ycsbc
 
 #endif // YCSB_C_SPLINTER_DB_H_
-

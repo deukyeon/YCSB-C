@@ -16,32 +16,39 @@
 namespace ycsbc {
 
 class UniformGenerator : public Generator<uint64_t> {
- public:
-  // Both min and max are inclusive
-  UniformGenerator(std::default_random_engine &generator, uint64_t min, uint64_t max) :
-    generator_(generator),
-    dist_(min, max)
-  {
-    Next();
-  }
-  
-  uint64_t Next();
-  uint64_t Last();
-  
- private:
-  std::default_random_engine &generator_;
-  std::uniform_int_distribution<uint64_t> dist_;
-  uint64_t last_int_;
+public:
+   // Both min and max are inclusive
+   UniformGenerator(std::default_random_engine &generator,
+                    uint64_t                    min,
+                    uint64_t                    max)
+      : generator_(generator), dist_(min, max)
+   {
+      Next();
+   }
+
+   uint64_t
+   Next();
+   uint64_t
+   Last();
+
+private:
+   std::default_random_engine             &generator_;
+   std::uniform_int_distribution<uint64_t> dist_;
+   uint64_t                                last_int_;
 };
 
-inline uint64_t UniformGenerator::Next() {
-  return last_int_ = dist_(generator_);
+inline uint64_t
+UniformGenerator::Next()
+{
+   return last_int_ = dist_(generator_);
 }
 
-inline uint64_t UniformGenerator::Last() {
-  return last_int_;
+inline uint64_t
+UniformGenerator::Last()
+{
+   return last_int_;
 }
 
-} // ycsbc
+} // namespace ycsbc
 
 #endif // YCSB_C_UNIFORM_GENERATOR_H_
