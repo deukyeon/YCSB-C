@@ -77,7 +77,7 @@ def buildSystem(sys):
     run_shell_command('make')
 
 
-def parseLogfile(logfile_path, csv, system, seq):
+def parseLogfile(logfile_path, csv, system, conf, seq):
     f = open(logfile_path, "r")
     lines = f.readlines()
     f.close()
@@ -122,7 +122,7 @@ def parseLogfile(logfile_path, csv, system, seq):
 
     # print csv
     for tuple in zip(load_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
-        print(system, ','.join(tuple), seq, sep=',', file=csv)
+        print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
 
 def main(argc, argv):
     if argc < 2:
@@ -132,26 +132,28 @@ def main(argc, argv):
     if system not in available_systems:
         printHelp()
 
-    workload = argv[2]
-    if workload not in available_workloads:
+    conf = argv[2]
+    if conf not in available_workloads:
         printHelp()
 
     buildSystem(system)
 
-    label = system + '-' + workload
+    label = system + '-' + conf
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
-    spec_file = 'workloads/' + workload + '.spec'
+    spec_file = 'workloads/' + conf + '.spec'
 
     max_num_threads = min(os.cpu_count(), 32)
 
     cmds = []
-    for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
-        cmd = f'./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
+    # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
+    for thread in list(range(2, max_num_threads + 1, 2)):
+        cpulist = list(range(0, thread // 2)) + list(range(16, 16 + (thread // 2)))
+        cmd = f'numactl -C {",".join(map(str, cpulist))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
         cmds.append(cmd)
 
     csv = open(f'{label}.csv', 'w')
-    print("system,threads,load,workload,aborts,abort_rate,seq", file=csv)
+    print("system,conf,threads,load,workload,aborts,abort_rate,seq", file=csv)
     num_repeats = 5
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
@@ -169,7 +171,7 @@ def main(argc, argv):
                 logfile.write(out.decode())
             run_shell_command('rm -f splinterdb.db')
         logfile.close()
-        parseLogfile(log_path, csv, system, i)
+        parseLogfile(log_path, csv, system, conf, i)
     csv.close()
 
 if __name__ == '__main__':
