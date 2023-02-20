@@ -145,11 +145,15 @@ def main(argc, argv):
 
     max_num_threads = min(os.cpu_count(), 32)
 
+    cpulist = []
+    for i in range(max_num_threads // 2):
+        cpulist.append(i)
+        cpulist.append(i + 16)
+
     cmds = []
     # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     for thread in list(range(2, max_num_threads + 1, 2)):
-        cpulist = list(range(0, thread // 2)) + list(range(16, 16 + (thread // 2)))
-        cmd = f'numactl -C {",".join(map(str, cpulist))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
+        cmd = f'numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
         cmds.append(cmd)
 
     csv = open(f'{label}.csv', 'w')
