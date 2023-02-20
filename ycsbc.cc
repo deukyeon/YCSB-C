@@ -275,8 +275,7 @@ main(const int argc, const char *argv[])
       cout << "Load duration (sec):\t" << load_duration << endl;
    }
 
-   uint64_t ops_per_transactions =
-      stoi(ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT);
+   uint64_t ops_per_transactions = 1;
 
    // Perform any Run phases
    for (unsigned int i = 0; i < run_workloads.size(); i++) {
