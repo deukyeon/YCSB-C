@@ -195,7 +195,7 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
          op_count =
             std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY,
                                     p.GetProperty(RECORD_COUNT_PROPERTY)))
-            * ops_per_transaction_;
+            * ops_per_transaction_ * nthreads;
       } else {
          op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
       }
