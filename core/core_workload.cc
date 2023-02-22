@@ -84,7 +84,7 @@ const string CoreWorkload::THETA_DEFAULT  = "0.8";
 
 const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_PROPERTY =
    "maxtxnabortpaneltyus";
-const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_DEFAULT = "100";
+const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_DEFAULT = "1000";
 
 const string CoreWorkload::MAX_TXN_RETRY_PROPERTY = "maxtxnretry";
 const string CoreWorkload::MAX_TXN_RETRY_DEFAULT  = "10";
