@@ -258,12 +258,13 @@ Client::DoTransactionalOperations()
          // const int sleep_for =
          //     std::min((int)std::pow(2.0, (float)retry++),
          //     workload_.max_txn_retry_ms());
-         //      srand(time(NULL));
-         ++retry;
-         double r = 0;
-         drand48_r(&drand_buffer, &r);
-         const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
+
+         // double r = 0;
+         // drand48_r(&drand_buffer, &r);
+         // const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
+	 const int sleep_for = std::pow(2.0, retry * workload_.max_txn_abort_panelty_us());
          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+	 ++retry;
       } else {
          ++txn_cnt;
       }
