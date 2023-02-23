@@ -18,6 +18,7 @@
 #include <iostream>
 #include <string>
 #include <thread>
+#include <unordered_set>
 
 namespace ycsbc {
 
@@ -35,6 +36,24 @@ struct ClientOperation {
       return table == other.table && key == other.key && op == other.op;
    }
 };
+
+} // namespace ycsbc
+
+namespace std {
+template<>
+struct hash<ycsbc::ClientOperation> {
+   size_t
+   operator()(const ycsbc::ClientOperation &op) const
+   {
+      size_t hash_table = std::hash<std::string>{}(op.table);
+      size_t hash_key   = std::hash<std::string>{}(op.key);
+      size_t hash_op    = std::hash<int>{}(op.op);
+      return hash_table ^ hash_key ^ (hash_op << 1);
+   }
+};
+} // namespace std
+
+namespace ycsbc {
 
 class Client {
 public:
@@ -108,10 +127,11 @@ protected:
    std::string             key;
    std::vector<DB::KVPair> pairs;
 
-   std::vector<ClientOperation> operations_in_transaction;
-   unsigned long                abort_cnt;
-   unsigned long                txn_cnt;
-   drand48_data                 drand_buffer;
+   // std::vector<ClientOperation> operations_in_transaction;
+   std::unordered_set<ClientOperation> operations_in_transaction;
+   unsigned long                       abort_cnt;
+   unsigned long                       txn_cnt;
+   drand48_data                        drand_buffer;
 };
 
 inline bool
@@ -181,11 +201,14 @@ Client::DoOperation()
 inline bool
 Client::DoTransactionalOperations()
 {
-   for (int i = 0; i < workload_.ops_per_transaction(); ++i) {
+   // for (int i = 0; i < workload_.ops_per_transaction(); ++i) {
+   while (operations_in_transaction.size()
+          < (size_t)workload_.ops_per_transaction())
+   {
       Operation op = workload_.NextOperation();
 
-   RETRY:
-   {
+      // RETRY:
+      // {
       ClientOperation client_op;
 
       switch (op) {
@@ -207,15 +230,16 @@ Client::DoTransactionalOperations()
          default:
             throw utils::Exception("Operation request is not recognized!");
       }
-      const bool same_op_exist = std::find(operations_in_transaction.begin(),
-                                           operations_in_transaction.end(),
-                                           client_op)
-                                 != operations_in_transaction.end();
-      if (same_op_exist) {
-         goto RETRY;
-      }
-      operations_in_transaction.emplace_back(client_op);
-   }
+      operations_in_transaction.emplace(client_op);
+      // const bool same_op_exist = std::find(operations_in_transaction.begin(),
+      //                                      operations_in_transaction.end(),
+      //                                      client_op)
+      //                            != operations_in_transaction.end();
+      // if (same_op_exist) {
+      //    goto RETRY;
+      // }
+      // operations_in_transaction.emplace_back(client_op);
+      // }
    }
 
    // for (auto &op : operations_in_transaction) {
@@ -230,7 +254,7 @@ Client::DoTransactionalOperations()
       Transaction *txn    = NULL;
       db_.Begin(&txn);
 
-      for (ClientOperation &client_op : operations_in_transaction) {
+      for (ClientOperation client_op : operations_in_transaction) {
          switch (client_op.op) {
             case READ:
                status = TransactionRead(txn, client_op);
@@ -262,9 +286,10 @@ Client::DoTransactionalOperations()
          // double r = 0;
          // drand48_r(&drand_buffer, &r);
          // const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
-	 const int sleep_for = std::pow(2.0, retry * workload_.max_txn_abort_panelty_us());
+         const int sleep_for =
+            std::pow(2.0, retry * workload_.max_txn_abort_panelty_us());
          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
-	 ++retry;
+         ++retry;
       } else {
          ++txn_cnt;
       }
