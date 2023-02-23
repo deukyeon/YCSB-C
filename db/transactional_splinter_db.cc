@@ -111,8 +111,8 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    assert(!transactional_splinterdb_lookup(
       spl, txn_handle, key_slice, &lookup_result));
    if (!splinterdb_lookup_found(&lookup_result)) {
-     cout << "FAILED lookup " << key << endl;
-     assert(0);
+      cout << "FAILED lookup " << key << endl;
+      assert(0);
    }
    // cout << "done lookup " << key << endl;
    splinterdb_lookup_result_deinit(&lookup_result);
