@@ -27,7 +27,7 @@ system_branch_map = {
 system_sed_map = {
     'baseline-parallel': ['sed', '-i', 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g', 'src/transaction_private.h'],
     'silo-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g', 'src/experimental_mode.h'],
-    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_DISK [ ]*0/#define EXPERIMENTAL_MODE_DISK 1/g', 'src/experimental_mode.h'],
+    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g', 'src/experimental_mode.h'],
     'tictoc-cache-unlimit': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g', 'src/experimental_mode.h']
 }
 
@@ -159,7 +159,7 @@ def main(argc, argv):
 
     csv = open(f'{label}.csv', 'w')
     print("system,conf,threads,load,workload,aborts,abort_rate,seq", file=csv)
-    num_repeats = 5
+    num_repeats = 1
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
         logfile = open(log_path, 'w')
