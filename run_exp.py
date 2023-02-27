@@ -15,22 +15,23 @@ available_systems = [
 
 system_branch_map = {
     'splinterdb': 'deukyeon/tictoc',
-    'tictoc-disk': 'deukyeon/tictoc',
+    'tictoc-disk': 'deukyeon/fantastiCC-refactor',
     'silo-disk': 'deukyeon/silo-disk',
     'baseline-serial': 'deukyeon/baseline',
     'baseline-parallel': 'deukyeon/baseline',
-    'silo-memory': 'deukyeon/fantastiCC',
-    'tictoc-cache-unlimit': 'deukyeon/fantastiCC',
-    'fantastiCC': 'deukyeon/fantastiCC'
+    'silo-memory': 'deukyeon/fantastiCC-refactor',
+    'tictoc-cache-unlimit': 'deukyeon/fantastiCC-refactor',
+    'fantastiCC': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
     'baseline-parallel': ['sed', '-i', 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g', 'src/transaction_private.h'],
     'silo-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g', 'src/experimental_mode.h'],
+    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_DISK [ ]*0/#define EXPERIMENTAL_MODE_DISK 1/g', 'src/experimental_mode.h'],
     'tictoc-cache-unlimit': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g', 'src/experimental_mode.h']
 }
 
-systems_with_iceberg = ['fantastiCC', 'tictoc-cache-unlimit', 'silo-memory']
+systems_with_iceberg = [k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
 
 available_workloads = [
     'high_contention',
