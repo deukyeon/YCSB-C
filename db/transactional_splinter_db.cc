@@ -110,11 +110,16 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
    assert(!transactional_splinterdb_lookup(
       spl, txn_handle, key_slice, &lookup_result));
-   if (!splinterdb_lookup_found(&lookup_result)) {
-      cout << "FAILED lookup " << key << endl;
-      assert(0);
-   }
+   // if (!splinterdb_lookup_found(&lookup_result)) {
+   //    cout << "FAILED lookup " << key << endl;
+   //    assert(0);
+   // }
    // cout << "done lookup " << key << endl;
+   slice value;
+   splinterdb_lookup_result_value(&lookup_result, // IN
+				  &value);
+   result.emplace_back(make_pair(key, (char *)slice_data(value)));
+
    splinterdb_lookup_result_deinit(&lookup_result);
    return DB::kOK;
 }
