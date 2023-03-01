@@ -332,7 +332,7 @@ main(const int argc, const char *argv[])
       }
       double run_duration = timer.End();
 
-      total_ops = total_txn_count * ops_per_transactions;
+      total_ops = total_txn_count; // * ops_per_transactions;
 
       cout << "# Transaction count:\t" << total_ops << endl;
       unsigned long sum = 0;
