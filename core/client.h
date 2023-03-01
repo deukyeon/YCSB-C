@@ -201,14 +201,27 @@ Client::DoOperation()
 inline bool
 Client::DoTransactionalOperations()
 {
-   // for (int i = 0; i < workload_.ops_per_transaction(); ++i) {
-   while (operations_in_transaction.size()
-          < (size_t)workload_.ops_per_transaction())
+  int num_ops = workload_.ops_per_transaction();
+
+  // double r = 0;
+  // drand48_r(&drand_buffer, &r);
+
+  // if (r < 0.1) {
+  //   num_ops = 64;
+  // } else {
+  //   num_ops = 16;
+  // }
+
+   for (int i = 0; i < num_ops; ++i)
+   // while (operations_in_transaction.size()
+   //        < (size_t)workload_.ops_per_transaction())
    {
       Operation op = workload_.NextOperation();
 
-      // RETRY:
-      // {
+      // if (r < 0.1) {
+      // 	op = READ;
+      // }
+
       ClientOperation client_op;
 
       switch (op) {
@@ -231,15 +244,6 @@ Client::DoTransactionalOperations()
             throw utils::Exception("Operation request is not recognized!");
       }
       operations_in_transaction.emplace(client_op);
-      // const bool same_op_exist = std::find(operations_in_transaction.begin(),
-      //                                      operations_in_transaction.end(),
-      //                                      client_op)
-      //                            != operations_in_transaction.end();
-      // if (same_op_exist) {
-      //    goto RETRY;
-      // }
-      // operations_in_transaction.emplace_back(client_op);
-      // }
    }
 
    // for (auto &op : operations_in_transaction) {
@@ -279,15 +283,8 @@ Client::DoTransactionalOperations()
 
       if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
          ++abort_cnt;
-         // const int sleep_for =
-         //     std::min((int)std::pow(2.0, (float)retry++),
-         //     workload_.max_txn_retry_ms());
-
-         // double r = 0;
-         // drand48_r(&drand_buffer, &r);
-         // const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
          const int sleep_for =
-            std::pow(2.0, retry * workload_.max_txn_abort_panelty_us());
+            std::pow(2.0, retry * workload_.min_txn_abort_panelty_us());
          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
          ++retry;
       } else {

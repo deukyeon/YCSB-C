@@ -143,8 +143,8 @@ public:
    static const std::string THETA_PROPERTY;
    static const std::string THETA_DEFAULT;
 
-   static const std::string MAX_TXN_ABORT_PANELTY_US_PROPERTY;
-   static const std::string MAX_TXN_ABORT_PANELTY_US_DEFAULT;
+   static const std::string MIN_TXN_ABORT_PANELTY_US_PROPERTY;
+   static const std::string MIN_TXN_ABORT_PANELTY_US_DEFAULT;
 
    static const std::string MAX_TXN_RETRY_PROPERTY;
    static const std::string MAX_TXN_RETRY_DEFAULT;
@@ -217,9 +217,9 @@ public:
       return ops_per_transaction_;
    }
    int
-   max_txn_abort_panelty_us() const
+   min_txn_abort_panelty_us() const
    {
-      return max_txn_abort_panelty_us_;
+      return min_txn_abort_panelty_us_;
    }
    int
    max_txn_retry() const
@@ -290,7 +290,7 @@ protected:
    size_t                              record_count_;
    int                                 zero_padding_;
    int                                 ops_per_transaction_;
-   int                                 max_txn_abort_panelty_us_;
+   int                                 min_txn_abort_panelty_us_;
    int                                 max_txn_retry_;
    unsigned long                       max_txn_count_;
    std::uniform_int_distribution<char> uniform_letter_dist_;

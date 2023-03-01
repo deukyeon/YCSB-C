@@ -82,9 +82,9 @@ const string CoreWorkload::OPS_PER_TRANSACTION_DEFAULT  = "1";
 const string CoreWorkload::THETA_PROPERTY = "theta";
 const string CoreWorkload::THETA_DEFAULT  = "0.8";
 
-const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_PROPERTY =
-   "maxtxnabortpaneltyus";
-const string CoreWorkload::MAX_TXN_ABORT_PANELTY_US_DEFAULT = "1000";
+const string CoreWorkload::MIN_TXN_ABORT_PANELTY_US_PROPERTY =
+   "mintxnabortpaneltyus";
+const string CoreWorkload::MIN_TXN_ABORT_PANELTY_US_DEFAULT = "1000";
 
 const string CoreWorkload::MAX_TXN_RETRY_PROPERTY = "maxtxnretry";
 const string CoreWorkload::MAX_TXN_RETRY_DEFAULT  = "10";
@@ -159,8 +159,8 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
    ops_per_transaction_ = std::stoi(
       p.GetProperty(OPS_PER_TRANSACTION_PROPERTY, OPS_PER_TRANSACTION_DEFAULT));
 
-   max_txn_abort_panelty_us_ = std::stoi(p.GetProperty(
-      MAX_TXN_ABORT_PANELTY_US_PROPERTY, MAX_TXN_ABORT_PANELTY_US_DEFAULT));
+   min_txn_abort_panelty_us_ = std::stoi(p.GetProperty(
+      MIN_TXN_ABORT_PANELTY_US_PROPERTY, MIN_TXN_ABORT_PANELTY_US_DEFAULT));
    max_txn_retry_ =
       std::stoi(p.GetProperty(MAX_TXN_RETRY_PROPERTY, MAX_TXN_RETRY_DEFAULT));
    max_txn_count_ =
