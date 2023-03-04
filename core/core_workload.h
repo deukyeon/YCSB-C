@@ -22,6 +22,7 @@
 namespace ycsbc {
 
 enum Operation { INSERT, READ, UPDATE, SCAN, READMODIFYWRITE };
+std::ostream& operator<<(std::ostream& out, const ycsbc::Operation value);
 
 class CoreWorkload {
 public:

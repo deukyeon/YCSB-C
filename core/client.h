@@ -33,7 +33,7 @@ struct ClientOperation {
    inline bool
    operator==(const ClientOperation &other) const
    {
-      return table == other.table && key == other.key && op == other.op;
+      return table == other.table && key == other.key; // && op == other.op;
    }
 };
 
@@ -47,8 +47,8 @@ struct hash<ycsbc::ClientOperation> {
    {
       size_t hash_table = std::hash<std::string>{}(op.table);
       size_t hash_key   = std::hash<std::string>{}(op.key);
-      size_t hash_op    = std::hash<int>{}(op.op);
-      return hash_table ^ hash_key ^ (hash_op << 1);
+      // size_t hash_op    = std::hash<int>{}(op.op);
+      return hash_table ^ hash_key; // ^ (hash_op << 1);
    }
 };
 } // namespace std
@@ -203,23 +203,18 @@ Client::DoTransactionalOperations()
 {
   int num_ops = workload_.ops_per_transaction();
 
-  // double r = 0;
-  // drand48_r(&drand_buffer, &r);
+//   double r = 0;
+//   drand48_r(&drand_buffer, &r);
+//   num_ops = r < 0.1 ? 32 : num_ops;
 
-  // if (r < 0.1) {
-  //   num_ops = 64;
-  // } else {
-  //   num_ops = 16;
-  // }
-
-   for (int i = 0; i < num_ops; ++i)
-   // while (operations_in_transaction.size()
-   //        < (size_t)workload_.ops_per_transaction())
+   // for (int i = 0; i < num_ops; ++i)
+   while (operations_in_transaction.size()
+          < (size_t)num_ops)
    {
       Operation op = workload_.NextOperation();
 
-      // if (r < 0.1) {
-      // 	op = READ;
+      // if (num_ops == 4) {
+      //    op = UPDATE;
       // }
 
       ClientOperation client_op;
@@ -247,7 +242,7 @@ Client::DoTransactionalOperations()
    }
 
    // for (auto &op : operations_in_transaction) {
-   //   std::cout << op.key << std::endl;
+   //   std::cout << op.op << " " << op.key << std::endl;
    // }
    // std::cout << "---" << std::endl;
 
