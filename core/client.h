@@ -207,9 +207,9 @@ Client::DoTransactionalOperations()
 //   drand48_r(&drand_buffer, &r);
 //   num_ops = r < 0.1 ? 32 : num_ops;
 
-   // for (int i = 0; i < num_ops; ++i)
-   while (operations_in_transaction.size()
-          < (size_t)num_ops)
+   for (int i = 0; i < num_ops; ++i)
+   // while (operations_in_transaction.size()
+   //        < (size_t)num_ops)
    {
       Operation op = workload_.NextOperation();
 
