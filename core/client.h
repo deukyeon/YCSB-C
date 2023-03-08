@@ -75,7 +75,6 @@ public:
 
    virtual ~Client()
    {
-      Client::total_abort_cnt.fetch_add(abort_cnt);
    }
 
    // getters for txn_cnt and abort_cnt
@@ -89,8 +88,6 @@ public:
    {
       return abort_cnt;
    }
-
-   static std::atomic<unsigned long> total_abort_cnt;
 
 protected:
    virtual bool

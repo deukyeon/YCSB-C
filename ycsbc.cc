@@ -146,7 +146,8 @@ DelegateClient(int                  id,
                uint64_t            *abort_cnt)
 {
    // ! Hoping this atomic shared variable is not bottlenecked.
-   static std::atomic<bool> run_bench(true);
+   static std::atomic<bool> run_bench;
+   run_bench.store(true);
    db->Init();
    ycsbc::Client client(id, *db, *wl);
    uint64_t      oks = 0;
@@ -187,8 +188,6 @@ DelegateClient(int                  id,
 
    return oks;
 }
-
-std::atomic<unsigned long> ycsbc::Client::total_abort_cnt(0);
 
 int
 main(const int argc, const char *argv[])
@@ -296,8 +295,8 @@ main(const int argc, const char *argv[])
       }
       uint64_t run_progress = 0;
       uint64_t last_printed = 0;
-      uint64_t txn_cnts[num_threads];
-      uint64_t abort_cnts[num_threads];
+      std::vector<uint64_t> txn_cnts(num_threads, 0);
+      std::vector<uint64_t> abort_cnts(num_threads, 0);
 
       timer.Start();
       {
@@ -348,10 +347,12 @@ main(const int argc, const char *argv[])
            << num_threads << '\t';
       cout << total_ops / run_duration / 1000 << endl;
       cout << "Run duration (sec):\t" << run_duration << endl;
-      cout << "# Abort count:\t" << ycsbc::Client::total_abort_cnt << '\n';
+
+      const uint64_t total_abort_cnt = std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
+      cout << "# Abort count:\t" << total_abort_cnt << '\n';
       cout << "Abort rate:\t"
-           << (double)ycsbc::Client::total_abort_cnt
-                 / (ycsbc::Client::total_abort_cnt + total_txn_count)
+           << (double)total_abort_cnt
+                 / (total_abort_cnt + total_txn_count)
            << "\n";
    }
 
