@@ -293,8 +293,8 @@ main(const int argc, const char *argv[])
             ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
             ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
       }
-      uint64_t run_progress = 0;
-      uint64_t last_printed = 0;
+      uint64_t              run_progress = 0;
+      uint64_t              last_printed = 0;
       std::vector<uint64_t> txn_cnts(num_threads, 0);
       std::vector<uint64_t> abort_cnts(num_threads, 0);
 
@@ -348,11 +348,11 @@ main(const int argc, const char *argv[])
       cout << total_ops / run_duration / 1000 << endl;
       cout << "Run duration (sec):\t" << run_duration << endl;
 
-      const uint64_t total_abort_cnt = std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
+      const uint64_t total_abort_cnt =
+         std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
       cout << "# Abort count:\t" << total_abort_cnt << '\n';
       cout << "Abort rate:\t"
-           << (double)total_abort_cnt
-                 / (total_abort_cnt + total_txn_count)
+           << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
            << "\n";
    }
 

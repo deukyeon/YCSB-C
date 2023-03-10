@@ -34,10 +34,8 @@ system_sed_map = {
 systems_with_iceberg = [k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
 
 available_workloads = [
-    'high_contention',
-    'medium_contention',
-    'read_only',
-    'unskewed'
+    'write_intensive',
+    'read_intensive'
 ]
 
 
@@ -79,7 +77,7 @@ def buildSystem(sys):
     run_shell_command('make')
 
 
-def parseLogfile(logfile_path, csv, system, conf, seq):
+def parseLogfile(logfile_path, csv, system, conf, thetas, seq):
     f = open(logfile_path, "r")
     lines = f.readlines()
     f.close()
@@ -123,7 +121,7 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             abort_rates.append(fields[-1])
 
     # print csv
-    for tuple in zip(load_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
+    for tuple in zip(load_threads, thetas, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
         print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
 
 def main(argc, argv):
@@ -153,13 +151,14 @@ def main(argc, argv):
         cpulist.append(i + 16)
 
     cmds = []
-    # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
-    for thread in list(range(4, max_num_threads + 1, 4)):
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file}'
+    thread = max_num_threads
+    thetas = [0, 0.4, 0.8, 0.9, 0.99]
+    for theta in thetas:
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w theta {theta}'
         cmds.append(cmd)
 
     csv = open(f'{label}.csv', 'w')
-    print("system,conf,threads,load,workload,aborts,abort_rate,seq", file=csv)
+    print("system,conf,threads,theta,load,workload,aborts,abort_rate,seq", file=csv)
     num_repeats = 1
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
@@ -178,7 +177,7 @@ def main(argc, argv):
                 logfile.write(out.decode())
             run_shell_command('rm -f splinterdb.db')
         logfile.close()
-        parseLogfile(log_path, csv, system, conf, i)
+        parseLogfile(log_path, csv, system, conf, list(map(str, thetas)), i)
     csv.close()
 
 if __name__ == '__main__':

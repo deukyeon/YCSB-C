@@ -73,9 +73,7 @@ public:
    virtual bool
    DoTransaction();
 
-   virtual ~Client()
-   {
-   }
+   virtual ~Client() {}
 
    // getters for txn_cnt and abort_cnt
    int
@@ -198,11 +196,11 @@ Client::DoOperation()
 inline bool
 Client::DoTransactionalOperations()
 {
-  int num_ops = workload_.ops_per_transaction();
+   int num_ops = workload_.ops_per_transaction();
 
-//   double r = 0;
-//   drand48_r(&drand_buffer, &r);
-//   num_ops = r < 0.1 ? 32 : num_ops;
+   //   double r = 0;
+   //   drand48_r(&drand_buffer, &r);
+   //   num_ops = r < 0.1 ? 32 : num_ops;
 
    for (int i = 0; i < num_ops; ++i)
    // while (operations_in_transaction.size()

@@ -117,7 +117,7 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    // cout << "done lookup " << key << endl;
    slice value;
    splinterdb_lookup_result_value(&lookup_result, // IN
-				  &value);
+                                  &value);
    result.emplace_back(make_pair(key, (char *)slice_data(value)));
 
    splinterdb_lookup_result_deinit(&lookup_result);

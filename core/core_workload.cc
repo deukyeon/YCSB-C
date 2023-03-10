@@ -18,19 +18,21 @@
 using std::string;
 using ycsbc::CoreWorkload;
 
-std::ostream& operator<<(std::ostream& out, const ycsbc::Operation value){
-    static std::map<ycsbc::Operation, std::string> strings;
-    if (strings.size() == 0){
+std::ostream &
+operator<<(std::ostream &out, const ycsbc::Operation value)
+{
+   static std::map<ycsbc::Operation, std::string> strings;
+   if (strings.size() == 0) {
 #define INSERT_ELEMENT(p) strings[p] = #p
-        INSERT_ELEMENT(ycsbc::INSERT);
-        INSERT_ELEMENT(ycsbc::READ);
-        INSERT_ELEMENT(ycsbc::UPDATE);
-        INSERT_ELEMENT(ycsbc::SCAN);
-        INSERT_ELEMENT(ycsbc::READMODIFYWRITE);
+      INSERT_ELEMENT(ycsbc::INSERT);
+      INSERT_ELEMENT(ycsbc::READ);
+      INSERT_ELEMENT(ycsbc::UPDATE);
+      INSERT_ELEMENT(ycsbc::SCAN);
+      INSERT_ELEMENT(ycsbc::READMODIFYWRITE);
 #undef INSERT_ELEMENT
-    }
+   }
 
-    return out << strings[value];
+   return out << strings[value];
 }
 
 const string CoreWorkload::TABLENAME_PROPERTY = "table";
