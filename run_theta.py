@@ -159,7 +159,7 @@ def main(argc, argv):
 
     csv = open(f'{label}.csv', 'w')
     print("system,conf,threads,theta,load,workload,aborts,abort_rate,seq", file=csv)
-    num_repeats = 1
+    num_repeats = 5
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
         logfile = open(log_path, 'w')
