@@ -94,6 +94,9 @@ public:
    int
    Delete(Transaction *txn, const std::string &table, const std::string &key);
 
+   int
+   Store(uint64_t *key, void* value, uint32_t size);
+
 private:
    splinterdb_config         splinterdb_cfg;
    data_config               data_cfg;

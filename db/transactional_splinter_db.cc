@@ -194,7 +194,7 @@ TransactionalSplinterDB::Begin(Transaction **txn)
 int
 TransactionalSplinterDB::Commit(Transaction **txn)
 {
-   int          ret        = DB::kOK;
+   int ret = DB::kOK;
    transaction *txn_handle = &((SplinterDBTransaction *)*txn)->handle;
    if (transactional_splinterdb_commit(spl, txn_handle) < 0) {
       ret = DB::kErrorConflict;
@@ -280,6 +280,20 @@ TransactionalSplinterDB::Delete(const std::string &table,
                                 const std::string &key)
 {
    return Delete(NULL, table, key);
+}
+
+int
+TransactionalSplinterDB::Store(uint64_t *key, void* value, uint32_t size) {
+   slice       key_slice = slice_create(sizeof(uint64_t), key);
+   slice       val_slice = slice_create(size, value);
+   printf("Store key = %lu\n", *key);
+
+   Transaction *txn = NULL;
+   Begin(&txn);
+   assert(!transactional_splinterdb_insert(spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice));
+   assert(Commit(&txn) == DB::kOK);
+
+   return DB::kOK;
 }
 
 } // namespace ycsbc

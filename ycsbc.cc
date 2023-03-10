@@ -17,6 +17,13 @@
 #include <string>
 #include <vector>
 
+#define TPCC 0
+
+#if TPCC == 1
+#include "core/tpcc_workload.h"
+#endif
+
+
 using namespace std;
 
 typedef struct WorkloadProperties {
@@ -232,6 +239,13 @@ main(const int argc, const char *argv[])
          load_workload.props, num_threads, i, &key_generator);
    }
 
+#if TPCC == 1
+   //only works with transactional splinter DB
+   m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
+
+   TPCCWorkload tpcc_wl = TPCCWorkload();
+   tpcc_wl.init((ycsbc::TransactionalSplinterDB*)db); //loads TPCC tables into DB
+#else
    // Perform the Load phase
    if (!load_workload.preloaded) {
       timer.Start();
@@ -355,7 +369,7 @@ main(const int argc, const char *argv[])
            << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
            << "\n";
    }
-
+#endif
    delete db;
 }
 
