@@ -1,0 +1,14 @@
+recordcount=10000000
+workload=com.yahoo.ycsb.workloads.CoreWorkload
+fieldcount=1
+fieldlength=64
+readallfields=true
+requestdistribution=zipfian
+readproportion=0.9
+updateproportion=0
+scanproportion=0
+insertproportion=0
+readmodifywriteproportion=0.1
+theta=0.8
+opspertransaction=16
+maxtxncount=100000
