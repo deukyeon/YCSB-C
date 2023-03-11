@@ -47,6 +47,7 @@ std::map<string, string> default_props = {
    //
    {"splinterdb.filename", "splinterdb.db"},
    {"splinterdb.cache_size_mb", "4096"},
+   // {"splinterdb.cache_size_mb", "163840"},
    {"splinterdb.disk_size_gb", "1024"},
 
    {"splinterdb.max_key_size", "24"},
@@ -286,6 +287,8 @@ main(const int argc, const char *argv[])
            << num_threads << '\t';
       cout << total_txn_count / load_duration / 1000 << endl;
       cout << "Load duration (sec):\t" << load_duration << endl;
+
+      db->PrintDBStats();
    }
 
    uint64_t ops_per_transactions = 1;
@@ -368,6 +371,8 @@ main(const int argc, const char *argv[])
       cout << "Abort rate:\t"
            << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
            << "\n";
+
+      db->PrintDBStats();
    }
 #endif
    delete db;

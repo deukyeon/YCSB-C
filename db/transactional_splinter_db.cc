@@ -282,6 +282,7 @@ TransactionalSplinterDB::Delete(const std::string &table,
    return Delete(NULL, table, key);
 }
 
+
 int
 TransactionalSplinterDB::Store(uint64_t *key, void* value, uint32_t size) {
    slice       key_slice = slice_create(sizeof(uint64_t), key);
@@ -294,6 +295,19 @@ TransactionalSplinterDB::Store(uint64_t *key, void* value, uint32_t size) {
    assert(Commit(&txn) == DB::kOK);
 
    return DB::kOK;
+}
+
+///
+/// Print splinterdb stats.
+/// It requires to set the config "use_stats" to 1.
+///
+void
+TransactionalSplinterDB::PrintDBStats() const
+{
+   splinterdb *db = (splinterdb *)transactional_splinterdb_get_db(spl);
+   splinterdb_stats_print_insertion(db);
+   splinterdb_stats_print_lookup(db);
+   splinterdb_stats_reset(db);
 }
 
 } // namespace ycsbc

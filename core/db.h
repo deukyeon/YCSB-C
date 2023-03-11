@@ -225,6 +225,10 @@ public:
       return isTransactionSupported;
    }
 
+   virtual void
+   PrintDBStats() const
+   {}
+
 protected:
    bool isTransactionSupported = false;
 };

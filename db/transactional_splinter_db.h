@@ -97,6 +97,9 @@ public:
    int
    Store(uint64_t *key, void* value, uint32_t size);
 
+   virtual void
+   PrintDBStats() const;
+
 private:
    splinterdb_config         splinterdb_cfg;
    data_config               data_cfg;
