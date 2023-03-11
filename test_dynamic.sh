@@ -34,8 +34,9 @@ function run() {
 	./ycsbc -db transactional_splinterdb -threads 32 -L workloads/write_intensive.spec -W workloads/read_intensive.spec -W workloads/write_intensive.spec -w opspertransaction 4 &>$1
 }
 
-compile_ycsb
+
 compile_tictoc_cache
+compile_ycsb
 run $TICTOC_CACHE_OUT
 compile_fantasticc
 run $FANTASTICC_OUT
