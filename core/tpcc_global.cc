@@ -1,5 +1,7 @@
 #include "tpcc_global.h"
 
+namespace tpcc {
+
 drand48_data ** tpcc_buffer;
 
 ts_t g_abort_penalty = ABORT_PENALTY;
@@ -7,7 +9,6 @@ uint32_t g_thread_cnt = THREAD_CNT;
 uint32_t g_num_wh = NUM_WH;
 double g_perc_payment = PERC_PAYMENT;
 bool g_wh_update = WH_UPDATE;
-uint32_t g_part_cnt = PART_CNT;
 uint32_t g_max_items = 100000;
 uint32_t g_cust_per_dist = 3000;
 
@@ -15,36 +16,41 @@ uint32_t g_cust_per_dist = 3000;
 // helper functions
 /**********************************************/
 
-uint64_t wKey(uint64_t w_id)  {
-	return W_CODE + w_id;
+TPCCKey wKey(uint64_t w_id)  {
+	return TPCCKey{.table = WAREHOUSE, .key = w_id};
 }
 
-uint64_t iKey(uint64_t i_id)  {
-	return I_CODE + i_id;
+TPCCKey iKey(uint64_t i_id)  {
+	return TPCCKey{.table = ITEM, .key = i_id};
 }
 
-uint64_t dKey(uint64_t d_id, uint64_t d_w_id)  {
-	return D_CODE + d_w_id * DIST_PER_WARE + d_id; 
+TPCCKey dKey(uint64_t d_id, uint64_t d_w_id)  {
+	return TPCCKey{.table = DISTRICT, .key = d_w_id * DIST_PER_WARE + d_id};
 }
 
-uint64_t cKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id) {
-	return C_CODE + (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist + c_id;
+TPCCKey cKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id) {
+	return TPCCKey{.table = CUSTOMER, .key = (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist + c_id};
 }
 
-uint64_t olKey(uint64_t w_id, uint64_t d_id, uint64_t o_id) {
-	return OL_CODE + (w_id * DIST_PER_WARE + d_id) * g_cust_per_dist + o_id; 
+TPCCKey oKey(uint64_t w_id, uint64_t d_id, uint64_t o_id) {
+	return TPCCKey{.table = ORDER, .key = (w_id * DIST_PER_WARE + d_id) * MAX_ORDERS_PER_DISTRICT + o_id};
 }
 
-uint64_t oKey(uint64_t w_id, uint64_t d_id, uint64_t o_id) {
-	return O_CODE + (w_id * DIST_PER_WARE + d_id) * g_cust_per_dist + o_id; 
+TPCCKey olKey(uint64_t w_id, uint64_t d_id, uint64_t o_id, uint64_t ol_number) {
+	return TPCCKey{.table = ORDER_LINE, .key = ((w_id * DIST_PER_WARE + d_id) * MAX_ORDERS_PER_DISTRICT + o_id) * MAX_OL_PER_ORDER + ol_number};
 }
 
-uint64_t noKey(uint64_t w_id, uint64_t d_id, uint64_t o_id) {
-	return NO_CODE + (w_id * DIST_PER_WARE + d_id) * g_cust_per_dist + o_id; 
+TPCCKey noKey(uint64_t w_id, uint64_t d_id, uint64_t o_id) {
+	return TPCCKey{.table = NEW_ORDER, .key = (w_id * DIST_PER_WARE + d_id) * MAX_ORDERS_PER_DISTRICT + o_id};
 }
 
-uint64_t sKey(uint64_t s_i_id, uint64_t s_w_id) {
-	return S_CODE + s_w_id * g_max_items + s_i_id;
+TPCCKey sKey(uint64_t s_i_id, uint64_t s_w_id) {
+	return TPCCKey{.table = STOCK, .key = s_w_id * g_max_items + s_i_id};
+}
+
+// HISTORY table does not really have a primary (unique) key, but we will use the same one as for the customer
+TPCCKey hKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id) {
+	return TPCCKey{.table = HISTORY, .key = (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist + c_id};
 }
 
 uint64_t Lastname(uint64_t num, char* name) {
@@ -125,3 +131,5 @@ uint64_t MakeNumberString(int min, int max, char* str, uint64_t thd_id) {
   }
   return cnt;
 }
+
+} //namespace tpcc

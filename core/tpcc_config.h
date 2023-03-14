@@ -11,18 +11,10 @@
 #define FIRSTNAME_LEN 				16
 #define LASTNAME_LEN 				16
 #define DIST_PER_WARE				10
+#define MAX_ORDERS_PER_DISTRICT     2000000
+#define MAX_OL_PER_ORDER            15
 #define WH_UPDATE					true
 #define NUM_WH 						1
-#define PART_CNT                    1
-
-#define W_CODE                     0
-#define I_CODE                     (1ULL << 61)
-#define C_CODE                     (2ULL << 61)
-#define S_CODE                     (3ULL << 61)
-#define NO_CODE                    (4ULL << 61)
-#define O_CODE                     (10ULL << 60)
-#define OL_CODE                    (11ULL << 60)
-#define H_CODE                     (6ULL << 61)
-#define D_CODE                     (7ULL << 61)
+#define TOTAL_NUM_TRANSACTIONS      1
 
 #endif // _TPCC_CONFIG_H

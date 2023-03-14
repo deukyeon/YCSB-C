@@ -23,15 +23,13 @@ namespace tpcc {
 
 class TPCCClient {
 public:
-   TPCCClient(int id, ycsbc::DB &db) : id_(id), db_(db)
+   TPCCClient(int thread_id, TPCCWorkload *wl) : _thread_id(thread_id), _wl(wl)
    {
       abort_cnt = 0;
       txn_cnt   = 0;
-      srand48_r(id, &drand_buffer);
    }
 
-   virtual bool DoInsert();
-   virtual bool DoTransaction();
+   virtual bool run_transactions();
 
    virtual ~TPCCClient()
    {
@@ -53,55 +51,27 @@ public:
    //static std::atomic<unsigned long> total_abort_cnt;
 
 protected:
-   int                id_;
-   ycsbc::DB          &db_;
+   int                _thread_id;
+   TPCCWorkload       *_wl;
    unsigned long      abort_cnt;
    unsigned long      txn_cnt;
-   drand48_data       drand_buffer;
 };
 
 inline bool
-TPCCClient::DoInsert()
+TPCCClient::run_transactions()
 {
-   int status = -1;
-   if (db_.IsTransactionSupported()) {
-      ycsbc::Transaction *txn = NULL;
-      db_.Begin(&txn);
-      //status = db_.Insert(txn, workload_.NextTable(), key, pairs);
-      db_.Commit(&txn);
-   } else {
-      //status = db_.Insert(NULL, workload_.NextTable(), key, pairs);
+   TPCCTransaction txn;
+
+   for (uint32_t i = 0; i < TOTAL_NUM_TRANSACTIONS; i++) {
+      txn.init(_thread_id);
+      if (_wl->run_transaction(&txn) == ycsbc::DB::kOK) {
+         txn_cnt++;
+      } else {
+         abort_cnt++;
+      }
    }
 
-   return (status == ycsbc::DB::kOK);
-}
-
-inline bool
-TPCCClient::DoTransaction()
-{
-   // bool need_retry = false;
-   // int  retry      = 0;
-   // do {
-   //    int          status = -1;
-   //    ycsbc::Transaction *txn    = NULL;
-   //    db_.Begin(&txn);
-   //    if ((need_retry = db_.Commit(&txn) == ycsbc::DB::kErrorConflict)) {
-   //       ++abort_cnt;
-   //       // const int sleep_for =
-   //       //     std::min((int)std::pow(2.0, (float)retry++),
-   //       //     workload_.max_txn_retry_ms());
-
-   //       // double r = 0;
-   //       // drand48_r(&drand_buffer, &r);
-   //       // const int sleep_for = (r * workload_.max_txn_abort_panelty_us());
-	//       const int sleep_for = std::pow(2.0, retry * workload_.max_txn_abort_panelty_us());
-   //       std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
-	//       ++retry;
-   //    } else {
-   //       ++txn_cnt;
-   //    }
-   // } while (need_retry && retry <= workload_.max_txn_retry());
-   return 0;
+   return true;
 }
 
 } // namespace tpcc

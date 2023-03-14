@@ -13,10 +13,14 @@
 #include "tpcc_client.h"
 #include "db.h"
 #include "db/transactional_splinter_db.h"
+#include "db/splinter_db.h"
+
 
 
 #ifndef _TPCC_WORKLOAD_H_
 #define _TPCC_WORKLOAD_H_
+
+namespace tpcc {
 
 enum tpcc_txn_type {
 				TPCC_PAYMENT, 
@@ -101,14 +105,14 @@ typedef struct tpcc_order_row {
 } tpcc_order_row_t;
 
 typedef struct tpcc_order_line_row {
-   int64_t ol_o_id;
-   int64_t ol_d_id;
-   int64_t ol_w_id;
-   int64_t ol_number;
-   int64_t ol_i_id;
-   int64_t ol_supply_w_id;
-   int64_t ol_delivery_d;
-   int64_t ol_quantity;
+   uint64_t ol_o_id;
+   uint64_t ol_d_id;
+   uint64_t ol_w_id;
+   uint64_t ol_number;
+   uint64_t ol_i_id;
+   uint64_t ol_supply_w_id;
+   uint64_t ol_delivery_d;
+   uint64_t ol_quantity;
    double ol_amount;
    char ol_dist_info[24];
 } tpcc_order_line_row_t;
@@ -122,9 +126,9 @@ typedef struct tpcc_item_row {
 } tpcc_item_row_t;
 
 typedef struct tpcc_stock_row {
-   int64_t s_i_id;
-   int64_t s_w_id;
-   int64_t s_quantity;
+   uint64_t s_i_id;
+   uint64_t s_w_id;
+   uint64_t s_quantity;
    char s_dist_01[24];
    char s_dist_02[24];
    char s_dist_03[24];
@@ -142,38 +146,15 @@ typedef struct tpcc_stock_row {
 } tpcc_stock_row_t;
 
 
-/**********************************************/	
-// populates TPCC tables
 /**********************************************/
-class TPCCWorkload {
-public:
-  void init(ycsbc::TransactionalSplinterDB *db);
-private:
-  struct thread_args {
-    TPCCWorkload *wl;
-    uint32_t tid;
-  };
-  ycsbc::TransactionalSplinterDB *_db;
-
-  static void *thread_init_tables(void *args);
-  void init_warehouse_table(uint64_t wid);
-  void init_item_table();
-  void init_district_table(uint64_t wid);
-  void init_customer_table(uint64_t did, uint64_t wid);
-  void init_order_table(uint64_t did, uint64_t wid);
-  void init_stock_table(uint64_t wid);
-  void init_permutation(uint64_t * perm_c_id, uint64_t wid);
-};
-
-/**********************************************/	
-// generate and run TPCC transactions
+// generate input for TPCC transactions
 /**********************************************/
 class TPCCTransaction {
 public:
   tpcc_txn_type type;
 	void init(uint64_t thd_id);
-  bool run();
-	/**********************************************/	
+
+	/**********************************************/
 	// common txn input for both payment & new-order
 	/**********************************************/	
 	uint64_t w_id;
@@ -207,16 +188,41 @@ public:
 	uint64_t ol_delivery_d;
 	// for order-status
 
-
 private:
 	// warehouse id to partition id mapping
    //	uint64_t wh_to_part(uint64_t wid);
 	void gen_payment(uint64_t thd_id);
 	void gen_new_order(uint64_t thd_id);
 	void gen_order_status(uint64_t thd_id);
-  bool run_payment();
-	bool run_new_order();
-	bool run_order_status();
 };
+
+/**********************************************/
+// populates TPCC tables and runs TPCC transactions
+/**********************************************/
+class TPCCWorkload {
+public:
+  void init(ycsbc::TransactionalSplinterDB *db);
+  int run_transaction(TPCCTransaction *txn);
+private:
+  struct thread_args {
+    TPCCWorkload *wl;
+    uint32_t tid;
+  };
+  ycsbc::TransactionalSplinterDB *_db;
+
+  static void *thread_init_tables(void *args);
+  void init_warehouse_table(uint64_t wid);
+  void init_item_table();
+  void init_district_table(uint64_t wid);
+  void init_customer_table(uint64_t did, uint64_t wid);
+  void init_order_table(uint64_t did, uint64_t wid);
+  void init_stock_table(uint64_t wid);
+  void init_permutation(uint64_t * perm_c_id, uint64_t wid);
+
+  int run_payment(TPCCTransaction *txn);
+  int run_new_order(TPCCTransaction *txn);
+};
+
+} // namespace tpcc
 
 #endif // _TPCC_WORKLOAD_H_

@@ -284,16 +284,17 @@ TransactionalSplinterDB::Delete(const std::string &table,
 
 
 int
-TransactionalSplinterDB::Store(uint64_t *key, void* value, uint32_t size) {
-   slice       key_slice = slice_create(sizeof(uint64_t), key);
-   slice       val_slice = slice_create(size, value);
-   printf("Store key = %lu\n", *key);
+TransactionalSplinterDB::Store(void *key, uint32_t key_size, void* value, uint32_t value_size) {
+   slice       key_slice = slice_create(key_size, key);
+   slice       val_slice = slice_create(value_size, value);
+   //printf("Store key (%lu, %lu)\n", *(uint64_t*)key, *((uint64_t*)key+1));
 
    Transaction *txn = NULL;
    Begin(&txn);
    assert(!transactional_splinterdb_insert(spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice));
    assert(Commit(&txn) == DB::kOK);
 
+   //assert(!splinterdb_insert(spl, key_slice, val_slice));
    return DB::kOK;
 }
 
@@ -308,6 +309,54 @@ TransactionalSplinterDB::PrintDBStats() const
    splinterdb_stats_print_insertion(db);
    splinterdb_stats_print_lookup(db);
    splinterdb_stats_reset(db);
+}
+
+int
+TransactionalSplinterDB::Read(Transaction *txn,
+                              void *key,
+                              uint32_t key_size,
+                              void* value,
+                              uint32_t value_size)
+{
+   assert(txn != NULL);
+
+   splinterdb_lookup_result lookup_result;
+   transactional_splinterdb_lookup_result_init(spl, &lookup_result, value_size, (char *)value);
+   slice key_slice = slice_create(key_size, key);
+   // cout << "lookup " << key << endl;
+
+   transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
+   assert(!transactional_splinterdb_lookup(
+      spl, txn_handle, key_slice, &lookup_result));
+   // if (!splinterdb_lookup_found(&lookup_result)) {
+   //    cout << "FAILED lookup " << key << endl;
+   //    assert(0);
+   // }
+   // cout << "done lookup " << key << endl;
+
+   //TODO: transactional_splinterdb_lookup_result_deinit();
+   return DB::kOK;
+}
+
+int
+TransactionalSplinterDB::Update(Transaction *txn,
+                              void *key,
+                              uint32_t key_size,
+                              void* value,
+                              uint32_t value_size)
+{
+   assert(txn != NULL);
+
+   slice       key_slice = slice_create(key_size, key);
+   slice       val_slice = slice_create(value_size, value);
+   // cout << "insert " << key << endl;
+
+   transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
+   assert(
+      !transactional_splinterdb_insert(spl, txn_handle, key_slice, val_slice));
+   // cout << "done insert " << key << endl;
+
+   return DB::kOK;
 }
 
 } // namespace ycsbc

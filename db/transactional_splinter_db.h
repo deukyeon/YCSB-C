@@ -95,7 +95,11 @@ public:
    Delete(Transaction *txn, const std::string &table, const std::string &key);
 
    int
-   Store(uint64_t *key, void* value, uint32_t size);
+   Store(void *key, uint32_t key_size, void* value, uint32_t value_size);
+   int
+   Read(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
+   int
+   Update(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
 
    virtual void
    PrintDBStats() const;

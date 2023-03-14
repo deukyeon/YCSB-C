@@ -197,6 +197,33 @@ DelegateClient(int                  id,
    return oks;
 }
 
+#if TPCC == 1
+int
+DelegateTPCCClient(uint32_t                thread_id,
+                  ycsbc::DB                *db,
+                  tpcc::TPCCWorkload       *wl,
+                  uint64_t                 *txn_cnt,
+                  uint64_t                 *abort_cnt)
+{
+   db->Init();
+
+   tpcc::TPCCClient client(thread_id, wl);
+   uint64_t num_txns = client.run_transactions();
+
+   if (txn_cnt) {
+      *txn_cnt = client.GetTxnCnt();
+   }
+
+   if (abort_cnt) {
+      *abort_cnt = client.GetAbortCnt();
+   }
+   db->Close();
+
+   return num_txns;
+}
+#endif
+
+
 int
 main(const int argc, const char *argv[])
 {
@@ -224,6 +251,62 @@ main(const int argc, const char *argv[])
       exit(0);
    }
 
+#if TPCC == 1
+   //only works with transactional splinter DB
+   //m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
+
+   tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
+   tpcc_wl.init((ycsbc::TransactionalSplinterDB*)db); //loads TPCC tables into DB
+
+   std::vector<uint64_t> txn_cnts(num_threads, 0);
+   std::vector<uint64_t> abort_cnts(num_threads, 0);
+
+   timer.Start();
+   {
+      for (unsigned int i = 0; i < num_threads; ++i) {
+         actual_ops.emplace_back(async(launch::async,
+                                       DelegateTPCCClient,
+                                       i,
+                                       db,
+                                       &tpcc_wl,
+                                       &txn_cnts[i],
+                                       &abort_cnts[i]));
+      }
+      assert(actual_ops.size() == num_threads);
+      total_txn_count = 0;
+      for (auto &n : actual_ops) {
+         assert(n.valid());
+         total_txn_count += n.get();
+      }
+      if (pmode != no_progress) {
+         cout << "\n";
+      }
+   }
+
+   double run_duration = timer.End();
+
+   cout << "# Transaction count:\t" << total_txn_count << endl;
+   unsigned long sum = 0;
+   for (unsigned int i = 0; i < num_threads; ++i) {
+      cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
+           << ", abort_cnt: " << abort_cnts[i] << endl;
+      sum += txn_cnts[i];
+   }
+
+   cout << "# Transaction throughput (KTPS)" << endl;
+   cout << props["dbname"] << " TransactionalSplinterDB" <<'\t'
+        << num_threads << '\t';
+   cout << total_txn_count / run_duration / 1000 << endl;
+   cout << "Run duration (sec):\t" << run_duration << endl;
+
+   const uint64_t total_abort_cnt =
+      std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
+   cout << "# Abort count:\t" << total_abort_cnt << '\n';
+   cout << "Abort rate:\t"
+        << (double)total_abort_cnt / total_txn_count
+        << "\n";
+
+#else
    record_count =
       stoi(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
    uint64_t batch_size = sqrt(record_count);
@@ -240,13 +323,6 @@ main(const int argc, const char *argv[])
          load_workload.props, num_threads, i, &key_generator);
    }
 
-#if TPCC == 1
-   //only works with transactional splinter DB
-   m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
-
-   TPCCWorkload tpcc_wl = TPCCWorkload();
-   tpcc_wl.init((ycsbc::TransactionalSplinterDB*)db); //loads TPCC tables into DB
-#else
    // Perform the Load phase
    if (!load_workload.preloaded) {
       timer.Start();

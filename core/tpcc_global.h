@@ -8,6 +8,8 @@
 #include <cassert>
 #include "tpcc_config.h"
 
+namespace tpcc {
+
 // random generator per warehouse
 extern drand48_data ** tpcc_buffer;
 
@@ -40,13 +42,27 @@ uint64_t Lastname(uint64_t num, char* name);
 uint64_t MakeAlphaString(int min, int max, char* str, uint64_t thd_id);
 uint64_t MakeNumberString(int min, int max, char* str, uint64_t thd_id);
 
-uint64_t wKey(uint64_t w_id);
-uint64_t iKey(uint64_t i_id);
-uint64_t dKey(uint64_t d_id, uint64_t d_w_id);
-uint64_t cKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id);
-uint64_t olKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);
-uint64_t oKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);
-uint64_t noKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);
-uint64_t sKey(uint64_t s_i_id, uint64_t s_w_id);
+typedef struct {
+	uint64_t table;
+	uint64_t key;
+	uint64_t padding; // this is to make the key size 24
+					  // bytes to work with Icerberg and Splinter's
+					  // key-compare function
+} TPCCKey;
+
+// TPCC tables
+enum {WAREHOUSE, ITEM, CUSTOMER, STOCK, NEW_ORDER, ORDER, ORDER_LINE, HISTORY, DISTRICT};
+
+TPCCKey wKey(uint64_t w_id);
+TPCCKey iKey(uint64_t i_id);
+TPCCKey dKey(uint64_t d_id, uint64_t d_w_id);
+TPCCKey cKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id);
+TPCCKey olKey(uint64_t w_id, uint64_t d_id, uint64_t o_id, uint64_t ol_number);
+TPCCKey oKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);
+TPCCKey noKey(uint64_t w_id, uint64_t d_id, uint64_t o_id);
+TPCCKey sKey(uint64_t s_i_id, uint64_t s_w_id);
+TPCCKey hKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id);
+
+} // namespace tpcc
 
 #endif // _TPCC_GLOBAL_H_
