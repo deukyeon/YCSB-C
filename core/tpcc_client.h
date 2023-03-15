@@ -64,11 +64,20 @@ TPCCClient::run_transactions()
 
    for (uint32_t i = 0; i < TOTAL_NUM_TRANSACTIONS; i++) {
       txn.init(_thread_id);
-      if (_wl->run_transaction(&txn) == ycsbc::DB::kOK) {
-         txn_cnt++;
-      } else {
-         abort_cnt++;
-      }
+
+      bool need_retry = false;
+      uint32_t  retry      = 0;
+      do {
+         if ((need_retry = _wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict)) {
+            ++abort_cnt;
+            const int sleep_for =
+               std::pow(2.0, retry * g_abort_penalty_us);
+            std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+            ++retry;
+         } else {
+            ++txn_cnt;
+         }
+      } while (need_retry && retry <= g_max_txn_retry);
    }
 
    return true;

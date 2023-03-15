@@ -4,13 +4,14 @@ namespace tpcc {
 
 drand48_data ** tpcc_buffer;
 
-ts_t g_abort_penalty = ABORT_PENALTY;
+uint32_t g_abort_penalty_us = ABORT_PENALTY_US;
 uint32_t g_thread_cnt = THREAD_CNT;
 uint32_t g_num_wh = NUM_WH;
 double g_perc_payment = PERC_PAYMENT;
 bool g_wh_update = WH_UPDATE;
-uint32_t g_max_items = 100000;
-uint32_t g_cust_per_dist = 3000;
+uint32_t g_max_items = MAX_ITEMS;
+uint32_t g_cust_per_dist = MAX_CUST_PER_DIST;
+uint32_t g_max_txn_retry = MAX_TXN_RETRY;
 
 /**********************************************/	
 // helper functions

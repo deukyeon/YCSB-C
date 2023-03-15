@@ -208,7 +208,7 @@ DelegateTPCCClient(uint32_t                thread_id,
    db->Init();
 
    tpcc::TPCCClient client(thread_id, wl);
-   uint64_t num_txns = client.run_transactions();
+   client.run_transactions();
 
    if (txn_cnt) {
       *txn_cnt = client.GetTxnCnt();
@@ -219,7 +219,7 @@ DelegateTPCCClient(uint32_t                thread_id,
    }
    db->Close();
 
-   return num_txns;
+   return 0;
 }
 #endif
 
@@ -253,7 +253,7 @@ main(const int argc, const char *argv[])
 
 #if TPCC == 1
    //only works with transactional splinter DB
-   //m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
+   m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
 
    tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
    tpcc_wl.init((ycsbc::TransactionalSplinterDB*)db); //loads TPCC tables into DB
@@ -273,10 +273,9 @@ main(const int argc, const char *argv[])
                                        &abort_cnts[i]));
       }
       assert(actual_ops.size() == num_threads);
-      total_txn_count = 0;
       for (auto &n : actual_ops) {
          assert(n.valid());
-         total_txn_count += n.get();
+         n.get();
       }
       if (pmode != no_progress) {
          cout << "\n";
@@ -285,25 +284,25 @@ main(const int argc, const char *argv[])
 
    double run_duration = timer.End();
 
-   cout << "# Transaction count:\t" << total_txn_count << endl;
-   unsigned long sum = 0;
+   uint64_t total_committed_cnt = 0;
+   uint64_t total_aborted_cnt = 0;
+
    for (unsigned int i = 0; i < num_threads; ++i) {
       cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
            << ", abort_cnt: " << abort_cnts[i] << endl;
-      sum += txn_cnts[i];
+      total_committed_cnt += txn_cnts[i];
+      total_aborted_cnt += abort_cnts[i];
    }
 
-   cout << "# Transaction throughput (KTPS)" << endl;
+   cout << "# Transaction goodput (KTPS)" << endl;
    cout << props["dbname"] << " TransactionalSplinterDB" <<'\t'
         << num_threads << '\t';
-   cout << total_txn_count / run_duration / 1000 << endl;
+   cout << total_committed_cnt / run_duration / 1000 << endl;
    cout << "Run duration (sec):\t" << run_duration << endl;
 
-   const uint64_t total_abort_cnt =
-      std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
-   cout << "# Abort count:\t" << total_abort_cnt << '\n';
+   cout << "# Abort count:\t" << total_aborted_cnt << '\n';
    cout << "Abort rate:\t"
-        << (double)total_abort_cnt / total_txn_count
+        << (double)total_aborted_cnt / (total_aborted_cnt + total_committed_cnt)
         << "\n";
 
 #else
@@ -582,10 +581,13 @@ ParseCommandLine(int                         argc,
       }
    }
 
+#if TPCC == 1
+#else
    if (argindex == 1 || argindex != argc || !saw_load_workload) {
       UsageMessage(argv[0]);
       exit(0);
    }
+#endif
 }
 
 void

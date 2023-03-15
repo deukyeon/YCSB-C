@@ -102,13 +102,15 @@ TPCCTransaction::gen_order_status(uint64_t thd_id) {
 }
 
 void TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db) {
+	printf("Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, g_cust_per_dist = %d\n", g_num_wh, g_max_items, g_cust_per_dist);
 	_db = db;
 	// load all tables in the database
 	tpcc_buffer = new drand48_data * [g_num_wh];
-	pthread_t * p_thds = new pthread_t[g_num_wh - 1];
+	pthread_t p_thds[g_num_wh];
+	thread_args a[g_num_wh];
 	for (uint32_t i = 0; i < g_num_wh; i++) {
-		thread_args a = {this, i};
-		pthread_create(&p_thds[i], NULL, thread_init_tables, &a);
+		a[i] = {.wl = this, .tid = i};
+		pthread_create(&p_thds[i], NULL, thread_init_tables, &a[i]);
 	}
 	for (uint32_t i = 0; i < g_num_wh; i++) 
 		pthread_join(p_thds[i], NULL);
@@ -347,7 +349,7 @@ int TPCCWorkload::run_payment(TPCCTransaction *txn) {
 	tpcc_customer_row_t c_r;
 	tpcc_history_row_t h_r;
 
-	//printf("Running payment on warehouse: %lu\n", txn->w_id);
+	//printf("PAYMENT on warehouse: %lu, district: %lu, client: %lu\n", txn->w_id, txn->d_id, txn->c_id);
 
 	ycsbc::Transaction *t = NULL;
     _db->Begin(&t);
@@ -413,6 +415,8 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 
 	double total_amount = 0; // transaction's output displayed at the terminal
 	//char brand_generic[txn->ol_cnt]; // transaction's output displayed at the terminal
+
+	//printf("NEW_ORDER on warehouse: %lu, district: %lu, client: %lu\n", txn->w_id, txn->d_id, txn->c_id);
 
 	ycsbc::Transaction *t = NULL;
     _db->Begin(&t);
@@ -482,7 +486,7 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 		ol_r.ol_amount = ol_r.ol_quantity * i_r.i_price;
 		total_amount += ol_r.ol_amount;
 
-		// TODO: compute the brand_generic bit
+		// TODO: compute the brand_generic bits
 		//  if 'original' in i_r.i_data and 'original' in i_r.s_data
         //         brand_generic[ol_number] = 'B'
         // else

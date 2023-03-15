@@ -27,13 +27,13 @@ typedef uint64_t ts_t; // time stamp type
 // Global Parameters
 /******************************************/
 extern uint32_t g_thread_cnt;
-extern ts_t g_abort_penalty;
+extern uint32_t g_abort_penalty_us;
 extern uint32_t g_num_wh;
-extern uint32_t g_part_cnt;
 extern double g_perc_payment;
 extern bool g_wh_update;
 extern uint32_t g_max_items;
 extern uint32_t g_cust_per_dist;
+extern uint32_t g_max_txn_retry;
 
 uint64_t Rand(uint64_t max, uint64_t thd_id);
 uint64_t NURand(uint64_t A, uint64_t x, uint64_t y, uint64_t thd_id);
