@@ -241,8 +241,8 @@ Client::DoTransactionalOperations()
    // }
    // std::cout << "---" << std::endl;
 
-   bool need_retry = false;
-   int  retry      = 0;
+   bool is_abort = false;
+   int  retry    = 0;
    do {
       int          status = -1;
       Transaction *txn    = NULL;
@@ -271,47 +271,43 @@ Client::DoTransactionalOperations()
          assert(status >= 0);
       }
 
-      if ((need_retry = db_.Commit(&txn) == DB::kErrorConflict)) {
+      if ((is_abort = (db_.Commit(&txn) == DB::kErrorConflict))) {
          ++abort_cnt;
          const int sleep_for =
             std::pow(2.0, retry * workload_.min_txn_abort_panelty_us());
          std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
          ++retry;
-      } else {
-         ++txn_cnt;
       }
-   } while (need_retry && retry <= workload_.max_txn_retry());
+   } while (is_abort && retry <= workload_.max_txn_retry());
 
    operations_in_transaction.clear();
 
-   return !need_retry;
+   txn_cnt += !is_abort;
+
+   return !is_abort;
 }
 
 inline int
 Client::TransactionRead(Transaction *txn, ClientOperation &client_op)
 {
-   std::vector<DB::KVPair> result;
    if (!workload_.read_all_fields()) {
       std::vector<std::string> fields;
       fields.push_back("field" + workload_.NextFieldName());
-      return db_.Read(txn, client_op.table, client_op.key, &fields, result);
+      return db_.Read(txn, client_op.table, client_op.key, &fields, pairs);
    } else {
-      return db_.Read(txn, client_op.table, client_op.key, NULL, result);
+      return db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
    }
 }
 
 inline int
 Client::TransactionReadModifyWrite(Transaction *txn, ClientOperation &client_op)
 {
-   std::vector<DB::KVPair> result;
-
    if (!workload_.read_all_fields()) {
       db_.Read(
-         txn, client_op.table, client_op.key, &client_op.read_fields, result);
+         txn, client_op.table, client_op.key, &client_op.read_fields, pairs);
    } else {
-      db_.Read(txn, client_op.table, client_op.key, NULL, result);
+      db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
    }
-
    return db_.Update(txn, client_op.table, client_op.key, client_op.values);
 }
 

@@ -88,8 +88,9 @@ SplinterDB::Read(const string         &table,
                  const vector<string> *fields,
                  vector<KVPair>       &result)
 {
+   // YCSB Client will allocate the buffer for the result. Use result[0]. 
    splinterdb_lookup_result lookup_result;
-   splinterdb_lookup_result_init(spl, &lookup_result, 0, NULL);
+   splinterdb_lookup_result_init(spl, &lookup_result, result[0].second.size(), (char *)result[0].second.c_str());
    slice key_slice = slice_create(key.size(), key.c_str());
    // cout << "lookup " << key << endl;
    assert(!splinterdb_lookup(spl, key_slice, &lookup_result));
@@ -98,7 +99,7 @@ SplinterDB::Read(const string         &table,
       assert(0);
    }
    // cout << "done lookup " << key << endl;
-   splinterdb_lookup_result_deinit(&lookup_result);
+   // splinterdb_lookup_result_deinit(&lookup_result);
    return DB::kOK;
 }
 

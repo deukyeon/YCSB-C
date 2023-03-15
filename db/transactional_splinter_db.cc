@@ -103,7 +103,11 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    assert(txn != NULL);
 
    splinterdb_lookup_result lookup_result;
-   transactional_splinterdb_lookup_result_init(spl, &lookup_result, 0, NULL);
+   transactional_splinterdb_lookup_result_init(
+      spl,
+      &lookup_result,
+      result[0].second.size(),
+      (char *)result[0].second.c_str());
    slice key_slice = slice_create(key.size(), key.c_str());
    // cout << "lookup " << key << endl;
 
@@ -115,12 +119,13 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    //    assert(0);
    // }
    // cout << "done lookup " << key << endl;
-   slice value;
-   splinterdb_lookup_result_value(&lookup_result, // IN
-                                  &value);
-   result.emplace_back(make_pair(key, (char *)slice_data(value)));
 
-   splinterdb_lookup_result_deinit(&lookup_result);
+   // slice value;
+   // splinterdb_lookup_result_value(&lookup_result, // IN
+   //                                &value);
+   // result.emplace_back(make_pair(key, (char *)slice_data(value)));
+
+   // splinterdb_lookup_result_deinit(&lookup_result);
    return DB::kOK;
 }
 
@@ -194,7 +199,7 @@ TransactionalSplinterDB::Begin(Transaction **txn)
 int
 TransactionalSplinterDB::Commit(Transaction **txn)
 {
-   int ret = DB::kOK;
+   int          ret        = DB::kOK;
    transaction *txn_handle = &((SplinterDBTransaction *)*txn)->handle;
    if (transactional_splinterdb_commit(spl, txn_handle) < 0) {
       ret = DB::kErrorConflict;
@@ -291,7 +296,8 @@ TransactionalSplinterDB::Store(void *key, uint32_t key_size, void* value, uint32
 
    Transaction *txn = NULL;
    Begin(&txn);
-   assert(!transactional_splinterdb_insert(spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice));
+   assert(!transactional_splinterdb_insert(
+      spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice));
    assert(Commit(&txn) == DB::kOK);
 
    //assert(!splinterdb_insert(spl, key_slice, val_slice));

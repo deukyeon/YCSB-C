@@ -31,7 +31,7 @@ function compile_fantasticc() {
 function run() {
 	export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so
 	echo 1 | sudo tee /proc/sys/vm/drop_caches
-	./ycsbc -db transactional_splinterdb -threads 32 -L workloads/write_intensive.spec -W workloads/read_intensive.spec -W workloads/write_intensive.spec -w opspertransaction 4 &>$1
+	./ycsbc -db transactional_splinterdb -threads 32 -L workloads/read_intensive.spec -W workloads/read_intensive.spec -W workloads/write_intensive.spec &>$1
 }
 
 

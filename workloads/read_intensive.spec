@@ -10,5 +10,5 @@ scanproportion=0
 insertproportion=0
 readmodifywriteproportion=0.1
 theta=0.8
-opspertransaction=16
-maxtxncount=100000
+opspertransaction=4
+maxtxncount=500000

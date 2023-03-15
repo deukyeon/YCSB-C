@@ -20,7 +20,7 @@
 #define TPCC 0
 
 #if TPCC == 1
-#include "core/tpcc_workload.h"
+#   include "core/tpcc_workload.h"
 #endif
 
 
