@@ -97,7 +97,7 @@ const string CoreWorkload::OPS_PER_TRANSACTION_PROPERTY = "opspertransaction";
 const string CoreWorkload::OPS_PER_TRANSACTION_DEFAULT  = "1";
 
 const string CoreWorkload::THETA_PROPERTY = "theta";
-const string CoreWorkload::THETA_DEFAULT  = "0.8";
+const string CoreWorkload::THETA_DEFAULT  = "0.99";
 
 const string CoreWorkload::MIN_TXN_ABORT_PANELTY_US_PROPERTY =
    "mintxnabortpaneltyus";
