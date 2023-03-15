@@ -209,10 +209,8 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
       // it and pick another key.
       int op_count;
       if (max_txn_count_ > 0) {
-         op_count =
-            std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY,
-                                    p.GetProperty(RECORD_COUNT_PROPERTY)))
-            * ops_per_transaction_ * nthreads;
+         // This is max op_count
+         op_count = max_txn_count_ * nthreads;
       } else {
          op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
       }
