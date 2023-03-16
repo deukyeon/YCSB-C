@@ -100,9 +100,10 @@ public:
    Read(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
    int
    Update(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
+   int
+   Insert(Transaction *txn, void *key, uint32_t key_size, void *value, uint32_t value_size);
 
-   virtual void
-   PrintDBStats() const;
+   virtual void PrintDBStats() const;
 
 private:
    splinterdb_config         splinterdb_cfg;

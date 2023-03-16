@@ -154,30 +154,31 @@ public:
   tpcc_txn_type type;
 	void init(uint64_t thd_id);
 
-	/**********************************************/
-	// common txn input for both payment & new-order
-	/**********************************************/	
-	uint64_t w_id;
-	uint64_t d_id;
-	uint64_t c_id;
-	/**********************************************/	
-	// txn input for payment
-	/**********************************************/	
-	uint64_t d_w_id;
-	uint64_t c_w_id;
-	uint64_t c_d_id;
-	char c_last[LASTNAME_LEN];
-	double h_amount;
-	bool by_last_name;
+  /**********************************************/
+  // common txn input for both payment & new-order
+  /**********************************************/
+  uint64_t w_id;
+  uint64_t d_id;
+  uint64_t c_id;
+  /**********************************************/
+  // txn input for payment
+  /**********************************************/
+  uint64_t d_w_id;
+  uint64_t c_w_id;
+  uint64_t c_d_id;
+  double   h_amount;
+  char c_last[LASTNAME_LEN];
+  bool by_last_name;
+
 	/**********************************************/	
 	// txn input for new-order
 	/**********************************************/
-   // items of new order transaction
-   struct item_no {
-	   uint64_t ol_i_id;
-	   uint64_t ol_supply_w_id;
-	   uint64_t ol_quantity;
-   };
+  // items of new order transaction
+  struct item_no {
+    uint64_t ol_i_id;
+    uint64_t ol_supply_w_id;
+    uint64_t ol_quantity;
+  };
 	item_no *items;
 	bool rbk;
 	bool remote;

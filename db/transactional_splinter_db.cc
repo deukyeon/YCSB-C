@@ -149,7 +149,7 @@ TransactionalSplinterDB::Update(Transaction    *txn,
                                 const string   &key,
                                 vector<KVPair> &values)
 {
-   return Insert(txn, table, key, values);
+   return Update(txn, table, key, values);
 }
 
 int
@@ -355,6 +355,27 @@ TransactionalSplinterDB::Update(Transaction *txn,
 
    slice       key_slice = slice_create(key_size, key);
    slice       val_slice = slice_create(value_size, value);
+   // cout << "update " << key << endl;
+
+   transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
+   assert(
+      !transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice));
+   // cout << "done update " << key << endl;
+
+   return DB::kOK;
+}
+
+int
+TransactionalSplinterDB::Insert(Transaction *txn,
+                                void        *key,
+                                uint32_t     key_size,
+                                void        *value,
+                                uint32_t     value_size)
+{
+   assert(txn != NULL);
+
+   slice key_slice = slice_create(key_size, key);
+   slice val_slice = slice_create(value_size, value);
    // cout << "insert " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;

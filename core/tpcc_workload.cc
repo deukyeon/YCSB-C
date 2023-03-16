@@ -342,6 +342,143 @@ int TPCCWorkload::run_transaction(TPCCTransaction *txn) {
 	}
 }
 
+struct CustomerParameters {
+  uint64_t w_id;
+  uint64_t d_id;
+  uint64_t c_id;
+  uint64_t d_w_id;
+  uint64_t c_w_id;
+  uint64_t c_d_id;
+  double   h_amount;
+};
+
+#define MAX_CUSTOMER_LOG_RECORDS (16)
+
+struct CustomerLogFragment {
+  double total_h_amount;
+  uint64_t total_payment_cnt;
+  uint64_t fragment_length;
+  CustomerParameters log[MAX_CUSTOMER_LOG_RECORDS];
+};
+
+struct StockUpdate {
+  uint64_t ol_quantity;
+  uint64_t order_cnt;
+  uint64_t remote_cnt;
+};
+
+static int tpcc_merge_tuple(const data_config *cfg,
+                slice              key,          // IN
+                message            old_message,  // IN
+                merge_accumulator *new_message) // IN/OUT
+{
+  TPCCKey *tkey = (TPCCKey *)slice_data(key);
+
+  if (tkey->table == WAREHOUSE) {
+    if (message_class(old_message) == MESSAGE_TYPE_UPDATE) {
+      double *new_h_amount = (double *)merge_accumulator_data(new_message);
+      double old_h_amount = *(double *)message_data(old_message);
+      *new_h_amount = *new_h_amount + old_h_amount;
+    } else {
+      // assert message_class(old_message) == MESSAGE_TYPE_INSERT
+      double h_amount = *(double *)merge_accumulator_data(new_message);
+      merge_accumulator_copy_message(new_message, old_message);
+      tpcc_warehouse_row_t *w_r = (tpcc_warehouse_row_t *)merge_accumulator_data(new_message);
+      w_r->w_ytd += h_amount;
+    }
+
+  } else if (tkey->table == DISTRICT) {
+    if (message_class(old_message) == MESSAGE_TYPE_UPDATE) {
+      double *new_h_amount = (double *)merge_accumulator_data(new_message);
+      double old_h_amount = *(double *)message_data(old_message);
+      *new_h_amount = *new_h_amount + old_h_amount;
+    } else {
+      // assert message_class(old_message) == MESSAGE_TYPE_INSERT
+      double h_amount = *(double *)merge_accumulator_data(new_message);
+      merge_accumulator_copy_message(new_message, old_message);
+      tpcc_district_row_t *d_r = (tpcc_district_row_t *)merge_accumulator_data(new_message);
+      d_r->d_ytd += h_amount;
+    }
+
+  } else if (tkey->table == CUSTOMER) {
+    if (message_class(old_message) == MESSAGE_TYPE_UPDATE) {
+      CustomerLogFragment *new_clf = (CustomerLogFragment *)merge_accumulator_data(new_message);
+      CustomerLogFragment *old_clf = (CustomerLogFragment *)message_data(old_message);
+      uint64 total_log_len = old_clf->fragment_length + new_clf->fragment_length;
+      if (total_log_len > MAX_CUSTOMER_LOG_RECORDS) {
+        total_log_len = MAX_CUSTOMER_LOG_RECORDS;
+      }
+      new_clf->total_payment_cnt += old_clf->total_payment_cnt;
+      new_clf->total_h_amount += old_clf->total_h_amount;
+      memcpy(&new_clf->log[new_clf->fragment_length], old_clf->log,
+             (total_log_len - new_clf->fragment_length) * sizeof(CustomerParameters));
+      new_clf->fragment_length = total_log_len;
+    } else {
+      CustomerLogFragment new_clf;
+      memcpy(&new_clf, merge_accumulator_data(new_message), sizeof(new_clf));
+      merge_accumulator_copy_message(new_message, old_message);
+      tpcc_customer_row_t *c_r = (tpcc_customer_row_t *)merge_accumulator_data(new_message);
+      c_r->c_balance -= new_clf.total_h_amount;
+      c_r->c_ytd_payment += new_clf.total_h_amount;
+      c_r->c_payment_cnt += new_clf.total_payment_cnt;
+      if (!strncmp(c_r->c_credit, "BC", 2)) {
+        char c_new_data[501];
+        char *start = c_new_data;
+        *start = '\0';
+        for (unsigned int i = 0; i < new_clf.fragment_length && start < c_new_data + sizeof(c_new_data); i++) {
+          int len = snprintf(start,
+                             c_new_data - start,
+                             "| %4ld %2ld %4ld %2ld %4ld $%7.2f",
+                             new_clf.log[i].c_id,
+                             new_clf.log[i].c_d_id,
+                             new_clf.log[i].c_w_id,
+                             new_clf.log[i].d_id,
+                             new_clf.log[i].w_id,
+                             new_clf.log[i].h_amount);
+          start += len;
+
+        }
+        strncat(c_new_data, c_r->c_data, 500 - strlen(c_new_data));
+        memcpy(c_r->c_data, c_new_data, 500);
+      }
+    }
+
+  } else if (tkey->table == STOCK) {
+    if (message_class(old_message) == MESSAGE_TYPE_UPDATE) {
+      StockUpdate *new_su = (StockUpdate *)merge_accumulator_data(new_message);
+      StockUpdate *old_su = (StockUpdate *)message_data(old_message);
+      new_su->ol_quantity += old_su->ol_quantity;
+      new_su->order_cnt += old_su->order_cnt;
+      new_su->remote_cnt += old_su->remote_cnt;
+    } else {
+      StockUpdate new_su;
+      memcpy(&new_su, merge_accumulator_data(new_message), sizeof(StockUpdate));
+      merge_accumulator_copy_message(new_message, old_message);
+      tpcc_stock_row_t *s_r = (tpcc_stock_row_t *)merge_accumulator_data(new_message);
+      if (s_r->s_quantity < new_su.ol_quantity) {
+        s_r->s_quantity += (new_su.ol_quantity + 90) / 91 * 91;
+      }
+      s_r->s_quantity -= new_su.ol_quantity;
+      if (s_r->s_quantity < 10) {
+        s_r->s_quantity += 91;
+      }
+      s_r->s_ytd += new_su.ol_quantity;
+      s_r->s_order_cnt += new_su.order_cnt;
+      s_r->s_remote_cnt += new_su.remote_cnt;
+    }
+  }
+
+  merge_accumulator_set_class(new_message, message_class(old_message));
+  return 0;
+}
+
+static int tpcc_merge_tuple_final(const data_config *cfg,
+                           slice              key,
+                           merge_accumulator *oldest_message)
+{
+  assert(0);
+}
+
 int TPCCWorkload::run_payment(TPCCTransaction *txn) {
 	TPCCKey key;
 	tpcc_warehouse_row_t w_r;
@@ -358,13 +495,13 @@ int TPCCWorkload::run_payment(TPCCTransaction *txn) {
 	key = wKey(txn->w_id);
 	_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r));
 	w_r.w_ytd += txn->h_amount;
-	_db->Update(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r));
 
 	// increase the YTD amount of the district of the home warehouse
 	key = dKey(txn->d_id, txn->w_id);
 	_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
 	d_r.d_ytd += txn->h_amount;
-	_db->Update(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
 
 	// update the customer info
 	key = cKey(txn->c_id, txn->c_d_id, txn->c_w_id);
@@ -381,7 +518,7 @@ int TPCCWorkload::run_payment(TPCCTransaction *txn) {
 		memcpy(c_r.c_data, c_new_data, 500);
 	}
 
-	_db->Update(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r));
 
 	// insert row into history
 	key = hKey(txn->c_id, txn->c_d_id, txn->c_w_id);
@@ -396,7 +533,7 @@ int TPCCWorkload::run_payment(TPCCTransaction *txn) {
 	memcpy(h_r.h_data, w_r.w_name, 10);
 	memcpy(h_r.h_data + 10, "    ", 4);
 	memcpy(h_r.h_data + 14, d_r.d_name, 10);
-	_db->Update(t, &key, sizeof(TPCCKey), &h_r, sizeof(h_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &h_r, sizeof(h_r));
 
 	return _db->Commit(&t);
 }
@@ -419,18 +556,18 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 	//printf("NEW_ORDER on warehouse: %lu, district: %lu, client: %lu\n", txn->w_id, txn->d_id, txn->c_id);
 
 	ycsbc::Transaction *t = NULL;
-    _db->Begin(&t);
+  _db->Begin(&t);
 
 	// get warehouse info
 	key = wKey(txn->w_id);
 	_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r));
-	key = dKey(txn->d_id, txn->w_id);
 
-	// get district info and bump the next order id
-	_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
-	order_id = d_r.d_next_o_id + 1;
+  // get district info and bump the next order id
+  key = dKey(txn->d_id, txn->w_id);
+  _db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
+  order_id        = d_r.d_next_o_id + 1;
 	d_r.d_next_o_id = order_id;
-	_db->Update(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r));
 
 	// get customer info
 	key = cKey(txn->c_id, txn->c_d_id, txn->c_w_id);
@@ -441,7 +578,7 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 	no_r.no_w_id = txn->w_id;
 	no_r.no_d_id = txn->d_id;
 	no_r.no_o_id = order_id;
-	_db->Update(t, &key, sizeof(TPCCKey), &no_r, sizeof(no_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &no_r, sizeof(no_r));
 
 	// insert into ORDER
 	key = oKey(txn->w_id, txn->d_id, order_id);
@@ -452,7 +589,7 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 	o_r.o_entry_d = txn->o_entry_d;
 	o_r.o_ol_cnt = txn->ol_cnt;
 	o_r.o_all_local = (txn->remote? 0 : 1);
-	_db->Update(t, &key, sizeof(TPCCKey), &o_r, sizeof(o_r));
+	_db->Insert(t, &key, sizeof(TPCCKey), &o_r, sizeof(o_r));
 
 	// insert into ORDER_LINE and STOCK
 	ol_r.ol_i_id = order_id;
@@ -481,7 +618,7 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
 		if (ol_r.ol_supply_w_id != txn->w_id) {
 			s_r.s_remote_cnt += 1;
 		}
-		_db->Update(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r));
+		_db->Insert(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r));
 
 		ol_r.ol_amount = ol_r.ol_quantity * i_r.i_price;
 		total_amount += ol_r.ol_amount;
@@ -493,7 +630,7 @@ int TPCCWorkload::run_new_order(TPCCTransaction *txn) {
         //         brand_generic[ol_number] = 'G'
 
 		key = olKey(txn->w_id, txn->d_id, order_id, ol_number);
-		_db->Update(t, &key, sizeof(TPCCKey), &ol_r, sizeof(ol_r));
+		_db->Insert(t, &key, sizeof(TPCCKey), &ol_r, sizeof(ol_r));
 	}
 
 	total_amount = total_amount * (1 + w_r.w_tax + d_r.d_tax) * (1 - c_r.c_discount);
