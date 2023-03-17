@@ -112,7 +112,8 @@ TPCCTransaction::gen_order_status(uint64_t thd_id)
 }
 
 void
-TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db, uint64_t num_client_threads)
+TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db,
+                   uint64_t                        num_client_threads)
 {
    printf(
       "Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, "
