@@ -117,15 +117,20 @@ TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db,
 {
    printf(
       "Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, "
-      "g_cust_per_dist = %d, g_max_txn_retry = %d, g_abort_penalty_us = %d\n",
+      "g_cust_per_dist = %d, g_max_txn_retry = %d, g_abort_penalty_us = %d, "
+      "g_total_num_transactions = %d\n",
       g_num_wh,
       g_max_items,
       g_cust_per_dist,
       g_max_txn_retry,
-      g_abort_penalty_us);
+      g_abort_penalty_us,
+      g_total_num_transactions);
    _db = db;
    // load all tables in the database
-   tpcc_buffer = new drand48_data *[num_client_threads + g_num_wh];
+   tpcc_buffer = new drand48_data [num_client_threads + g_num_wh];
+   for (unsigned int i = 0; i < num_client_threads + g_num_wh; i++) {
+     srand48_r(i, &tpcc_buffer[i]);
+   }
    pthread_t   p_thds[g_num_wh];
    thread_args a[g_num_wh];
    for (uint32_t i = 0; i < g_num_wh; i++) {
@@ -144,9 +149,7 @@ TPCCWorkload::thread_init_tables(void *args)
    TPCCWorkload::thread_args *a = (TPCCWorkload::thread_args *)args;
    a->wl->_db->Init();
    uint32_t wid        = a->tid + 1;
-   tpcc_buffer[a->tid] = (drand48_data *)_mm_malloc(sizeof(drand48_data), 64);
    assert((uint64_t)a->tid < g_num_wh);
-   srand48_r(wid, tpcc_buffer[a->tid]);
 
    if (a->tid == 0)
       a->wl->init_item_table();

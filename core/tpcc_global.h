@@ -11,7 +11,7 @@
 namespace tpcc {
 
 // random generator per warehouse
-extern drand48_data **tpcc_buffer;
+extern drand48_data *tpcc_buffer;
 
 #define m_assert(cond, ...)                                                    \
    if (!(cond)) {                                                              \
@@ -33,6 +33,7 @@ extern uint32_t g_max_items;
 extern uint32_t g_cust_per_dist;
 extern uint32_t g_max_txn_retry;
 extern bool     g_use_upserts;
+extern uint32_t g_total_num_transactions;
 
 uint64_t
 Rand(uint64_t max, uint64_t thd_id);

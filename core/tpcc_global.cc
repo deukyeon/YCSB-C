@@ -2,16 +2,17 @@
 
 namespace tpcc {
 
-drand48_data **tpcc_buffer;
+drand48_data *tpcc_buffer;
 
-uint32_t g_abort_penalty_us = ABORT_PENALTY_US;
-uint32_t g_num_wh           = NUM_WH;
-double   g_perc_payment     = PERC_PAYMENT;
-bool     g_wh_update        = WH_UPDATE;
-uint32_t g_max_items        = MAX_ITEMS;
-uint32_t g_cust_per_dist    = MAX_CUST_PER_DIST;
-uint32_t g_max_txn_retry    = MAX_TXN_RETRY;
-bool     g_use_upserts      = false;
+uint32_t g_abort_penalty_us       = ABORT_PENALTY_US;
+uint32_t g_num_wh                 = NUM_WH;
+double   g_perc_payment           = PERC_PAYMENT;
+bool     g_wh_update              = WH_UPDATE;
+uint32_t g_max_items              = MAX_ITEMS;
+uint32_t g_cust_per_dist          = MAX_CUST_PER_DIST;
+uint32_t g_max_txn_retry          = MAX_TXN_RETRY;
+bool     g_use_upserts            = false;
+uint32_t g_total_num_transactions = TOTAL_NUM_TRANSACTIONS;
 
 /**********************************************/
 // helper functions
@@ -118,7 +119,7 @@ uint64_t
 Rand(uint64_t max, uint64_t thd_id)
 {
    int64_t rint64 = 0;
-   lrand48_r(tpcc_buffer[thd_id], &rint64);
+   lrand48_r(&tpcc_buffer[thd_id], &rint64);
    return rint64 % max;
 }
 

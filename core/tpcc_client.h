@@ -63,7 +63,7 @@ TPCCClient::run_transactions()
 {
    TPCCTransaction txn;
 
-   for (uint32_t i = 0; i < TOTAL_NUM_TRANSACTIONS; i++) {
+   for (uint32_t i = 0; i < g_total_num_transactions; i++) {
       txn.init(_thread_id);
 
       bool     need_retry = false;
