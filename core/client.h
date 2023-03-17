@@ -308,7 +308,7 @@ Client::TransactionReadModifyWrite(Transaction *txn, ClientOperation &client_op)
    } else {
       db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
    }
-   return db_.Update(txn, client_op.table, client_op.key, client_op.values);
+   return db_.Insert(txn, client_op.table, client_op.key, client_op.values);
 }
 
 inline int

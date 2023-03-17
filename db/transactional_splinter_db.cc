@@ -162,7 +162,20 @@ TransactionalSplinterDB::Update(Transaction    *txn,
                                 const string   &key,
                                 vector<KVPair> &values)
 {
-   return Update(txn, table, key, values);
+   assert(txn != NULL);
+   assert(values.size() == 1);
+
+   std::string val       = values[0].second;
+   slice       key_slice = slice_create(key.size(), key.c_str());
+   slice       val_slice = slice_create(val.size(), val.c_str());
+   // cout << "update " << key << endl;
+
+   transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
+   assert(
+      !transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice));
+   // cout << "done update " << key << endl;
+
+   return DB::kOK;
 }
 
 int
