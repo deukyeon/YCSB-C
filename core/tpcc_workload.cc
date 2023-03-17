@@ -736,5 +736,4 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
    // TODO: do we want to use rbk?
 
    return _db->Commit(&t);
-   ;
 }
