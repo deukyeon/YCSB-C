@@ -29,11 +29,12 @@ public:
       txn_cnt   = 0;
    }
 
-   virtual bool run_transactions();
+   virtual bool
+   run_transactions();
 
    virtual ~TPCCClient()
    {
-      //TPCCClient::total_abort_cnt.fetch_add(abort_cnt);
+      // TPCCClient::total_abort_cnt.fetch_add(abort_cnt);
    }
 
    // getters for txn_cnt and abort_cnt
@@ -48,13 +49,13 @@ public:
       return abort_cnt;
    }
 
-   //static std::atomic<unsigned long> total_abort_cnt;
+   // static std::atomic<unsigned long> total_abort_cnt;
 
 protected:
-   int                _thread_id;
-   TPCCWorkload       *_wl;
-   unsigned long      abort_cnt;
-   unsigned long      txn_cnt;
+   int           _thread_id;
+   TPCCWorkload *_wl;
+   unsigned long abort_cnt;
+   unsigned long txn_cnt;
 };
 
 inline bool
@@ -65,13 +66,13 @@ TPCCClient::run_transactions()
    for (uint32_t i = 0; i < TOTAL_NUM_TRANSACTIONS; i++) {
       txn.init(_thread_id);
 
-      bool need_retry = false;
-      uint32_t  retry      = 0;
+      bool     need_retry = false;
+      uint32_t retry      = 0;
       do {
-         if ((need_retry = _wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict)) {
+         if ((need_retry =
+                 _wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict)) {
             ++abort_cnt;
-            const int sleep_for =
-               std::pow(2.0, retry * g_abort_penalty_us);
+            const int sleep_for = std::pow(2.0, retry * g_abort_penalty_us);
             std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
             ++retry;
          } else {

@@ -20,8 +20,11 @@ using std::vector;
 
 namespace ycsbc {
 
-TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
-                                                 bool               preloaded)
+TransactionalSplinterDB::TransactionalSplinterDB(
+   utils::Properties   &props,
+   bool                 preloaded,
+   merge_tuple_fn       merge,
+   merge_tuple_final_fn merge_final)
 {
    cout << "This is TransacionalSplinterDB\n";
    isTransactionSupported = true;
@@ -29,6 +32,11 @@ TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
    uint64_t max_key_size = props.GetIntProperty("splinterdb.max_key_size");
 
    default_data_config_init(max_key_size, &data_cfg);
+   if (merge)
+      data_cfg.merge_tuples = merge;
+   if (merge_final)
+      data_cfg.merge_tuples_final = merge_final;
+
    memset(&splinterdb_cfg, 0, sizeof(splinterdb_cfg));
    splinterdb_cfg.filename = props.GetProperty("splinterdb.filename").c_str();
    splinterdb_cfg.cache_size =
@@ -75,6 +83,11 @@ TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
       (transaction_isolation_level)props.GetIntProperty(
          "splinterdb.isolation_level"));
 }
+
+TransactionalSplinterDB::TransactionalSplinterDB(utils::Properties &props,
+                                                 bool               preloaded)
+   : TransactionalSplinterDB(props, preloaded, NULL, NULL)
+{}
 
 TransactionalSplinterDB::~TransactionalSplinterDB()
 {
@@ -289,10 +302,14 @@ TransactionalSplinterDB::Delete(const std::string &table,
 
 
 int
-TransactionalSplinterDB::Store(void *key, uint32_t key_size, void* value, uint32_t value_size) {
-   slice       key_slice = slice_create(key_size, key);
-   slice       val_slice = slice_create(value_size, value);
-   //printf("Store key (%lu, %lu)\n", *(uint64_t*)key, *((uint64_t*)key+1));
+TransactionalSplinterDB::Store(void    *key,
+                               uint32_t key_size,
+                               void    *value,
+                               uint32_t value_size)
+{
+   slice key_slice = slice_create(key_size, key);
+   slice val_slice = slice_create(value_size, value);
+   // printf("Store key (%lu, %lu)\n", *(uint64_t*)key, *((uint64_t*)key+1));
 
    Transaction *txn = NULL;
    Begin(&txn);
@@ -300,7 +317,7 @@ TransactionalSplinterDB::Store(void *key, uint32_t key_size, void* value, uint32
       spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice));
    assert(Commit(&txn) == DB::kOK);
 
-   //assert(!splinterdb_insert(spl, key_slice, val_slice));
+   // assert(!splinterdb_insert(spl, key_slice, val_slice));
    return DB::kOK;
 }
 
@@ -319,15 +336,16 @@ TransactionalSplinterDB::PrintDBStats() const
 
 int
 TransactionalSplinterDB::Read(Transaction *txn,
-                              void *key,
-                              uint32_t key_size,
-                              void* value,
-                              uint32_t value_size)
+                              void        *key,
+                              uint32_t     key_size,
+                              void        *value,
+                              uint32_t     value_size)
 {
    assert(txn != NULL);
 
    splinterdb_lookup_result lookup_result;
-   transactional_splinterdb_lookup_result_init(spl, &lookup_result, value_size, (char *)value);
+   transactional_splinterdb_lookup_result_init(
+      spl, &lookup_result, value_size, (char *)value);
    slice key_slice = slice_create(key_size, key);
    // cout << "lookup " << key << endl;
 
@@ -340,21 +358,21 @@ TransactionalSplinterDB::Read(Transaction *txn,
    // }
    // cout << "done lookup " << key << endl;
 
-   //TODO: transactional_splinterdb_lookup_result_deinit();
+   // TODO: transactional_splinterdb_lookup_result_deinit();
    return DB::kOK;
 }
 
 int
 TransactionalSplinterDB::Update(Transaction *txn,
-                              void *key,
-                              uint32_t key_size,
-                              void* value,
-                              uint32_t value_size)
+                                void        *key,
+                                uint32_t     key_size,
+                                void        *value,
+                                uint32_t     value_size)
 {
    assert(txn != NULL);
 
-   slice       key_slice = slice_create(key_size, key);
-   slice       val_slice = slice_create(value_size, value);
+   slice key_slice = slice_create(key_size, key);
+   slice val_slice = slice_create(value_size, value);
    // cout << "update " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;

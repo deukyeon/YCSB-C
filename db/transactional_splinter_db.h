@@ -25,6 +25,11 @@ namespace ycsbc {
 class TransactionalSplinterDB : public DB {
 public:
    TransactionalSplinterDB(utils::Properties &props, bool preloaded);
+   TransactionalSplinterDB(utils::Properties   &props,
+                           bool                 preloaded,
+                           merge_tuple_fn       merge,
+                           merge_tuple_final_fn merge_final);
+
    ~TransactionalSplinterDB();
 
    void
@@ -95,15 +100,28 @@ public:
    Delete(Transaction *txn, const std::string &table, const std::string &key);
 
    int
-   Store(void *key, uint32_t key_size, void* value, uint32_t value_size);
+   Store(void *key, uint32_t key_size, void *value, uint32_t value_size);
    int
-   Read(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
+   Read(Transaction *txn,
+        void        *key,
+        uint32_t     key_size,
+        void        *value,
+        uint32_t     value_size);
    int
-   Update(Transaction *txn, void *key, uint32_t key_size, void* value, uint32_t value_size);
+   Update(Transaction *txn,
+          void        *key,
+          uint32_t     key_size,
+          void        *value,
+          uint32_t     value_size);
    int
-   Insert(Transaction *txn, void *key, uint32_t key_size, void *value, uint32_t value_size);
+   Insert(Transaction *txn,
+          void        *key,
+          uint32_t     key_size,
+          void        *value,
+          uint32_t     value_size);
 
-   virtual void PrintDBStats() const;
+   virtual void
+   PrintDBStats() const;
 
 private:
    splinterdb_config         splinterdb_cfg;

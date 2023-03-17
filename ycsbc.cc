@@ -11,18 +11,14 @@
 #include "core/timer.h"
 #include "core/utils.h"
 #include "db/db_factory.h"
+#include "core/tpcc_workload.h"
 #include <cstring>
 #include <future>
 #include <iostream>
 #include <string>
 #include <vector>
 
-#define TPCC 0
-
-#if TPCC == 1
-#   include "core/tpcc_workload.h"
-#endif
-
+#define TPCC 1
 
 using namespace std;
 
@@ -197,13 +193,12 @@ DelegateClient(int                  id,
    return oks;
 }
 
-#if TPCC == 1
 int
-DelegateTPCCClient(uint32_t                thread_id,
-                  ycsbc::DB                *db,
-                  tpcc::TPCCWorkload       *wl,
-                  uint64_t                 *txn_cnt,
-                  uint64_t                 *abort_cnt)
+DelegateTPCCClient(uint32_t            thread_id,
+                   ycsbc::DB          *db,
+                   tpcc::TPCCWorkload *wl,
+                   uint64_t           *txn_cnt,
+                   uint64_t           *abort_cnt)
 {
    db->Init();
 
@@ -221,7 +216,6 @@ DelegateTPCCClient(uint32_t                thread_id,
 
    return 0;
 }
-#endif
 
 
 int
@@ -245,211 +239,216 @@ main(const int argc, const char *argv[])
    uint64_t             total_txn_count;
    utils::Timer<double> timer;
 
-   ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
-   if (!db) {
-      cout << "Unknown database name " << props["dbname"] << endl;
-      exit(0);
-   }
+   ycsbc::DB *db;
+   if (props.GetProperty("benchmark") == "tpcc") {
+      db = new ycsbc::TransactionalSplinterDB(props,
+                                              load_workload.preloaded,
+                                              tpcc::tpcc_merge_tuple,
+                                              tpcc::tpcc_merge_tuple_final);
 
-#if TPCC == 1
-   //only works with transactional splinter DB
-   m_assert(props["dbname"] == "transactional_splinterdb", "Only supports transactional splinter db");
+      tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
+      tpcc_wl.init(
+         (ycsbc::TransactionalSplinterDB *)db); // loads TPCC tables into DB
 
-   tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
-   tpcc_wl.init((ycsbc::TransactionalSplinterDB*)db); //loads TPCC tables into DB
-
-   std::vector<uint64_t> txn_cnts(num_threads, 0);
-   std::vector<uint64_t> abort_cnts(num_threads, 0);
-
-   timer.Start();
-   {
-      for (unsigned int i = 0; i < num_threads; ++i) {
-         actual_ops.emplace_back(async(launch::async,
-                                       DelegateTPCCClient,
-                                       i,
-                                       db,
-                                       &tpcc_wl,
-                                       &txn_cnts[i],
-                                       &abort_cnts[i]));
-      }
-      assert(actual_ops.size() == num_threads);
-      for (auto &n : actual_ops) {
-         assert(n.valid());
-         n.get();
-      }
-      if (pmode != no_progress) {
-         cout << "\n";
-      }
-   }
-
-   double run_duration = timer.End();
-
-   uint64_t total_committed_cnt = 0;
-   uint64_t total_aborted_cnt = 0;
-
-   for (unsigned int i = 0; i < num_threads; ++i) {
-      cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
-           << ", abort_cnt: " << abort_cnts[i] << endl;
-      total_committed_cnt += txn_cnts[i];
-      total_aborted_cnt += abort_cnts[i];
-   }
-
-   cout << "# Transaction goodput (KTPS)" << endl;
-   cout << props["dbname"] << " TransactionalSplinterDB" <<'\t'
-        << num_threads << '\t';
-   cout << total_committed_cnt / run_duration / 1000 << endl;
-   cout << "Run duration (sec):\t" << run_duration << endl;
-
-   cout << "# Abort count:\t" << total_aborted_cnt << '\n';
-   cout << "Abort rate:\t"
-        << (double)total_aborted_cnt / (total_aborted_cnt + total_committed_cnt)
-        << "\n";
-
-#else
-   record_count =
-      stoi(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
-   uint64_t batch_size = sqrt(record_count);
-   if (record_count / batch_size < num_threads)
-      batch_size = record_count / num_threads;
-   if (batch_size < 1)
-      batch_size = 1;
-
-   ycsbc::BatchedCounterGenerator key_generator(
-      load_workload.preloaded ? record_count : 0, batch_size);
-   ycsbc::CoreWorkload wls[num_threads];
-   for (unsigned int i = 0; i < num_threads; ++i) {
-      wls[i].InitLoadWorkload(
-         load_workload.props, num_threads, i, &key_generator);
-   }
-
-   // Perform the Load phase
-   if (!load_workload.preloaded) {
-      timer.Start();
-      {
-         cout << "# Loading records:\t" << record_count << endl;
-         uint64_t load_progress = 0;
-         uint64_t last_printed  = 0;
-         for (unsigned int i = 0; i < num_threads; ++i) {
-            uint64_t start_op = (record_count * i) / num_threads;
-            uint64_t end_op   = (record_count * (i + 1)) / num_threads;
-            actual_ops.emplace_back(async(launch::async,
-                                          DelegateClient,
-                                          i,
-                                          db,
-                                          &wls[i],
-                                          end_op - start_op,
-                                          true,
-                                          pmode,
-                                          record_count,
-                                          &load_progress,
-                                          &last_printed,
-                                          nullptr,
-                                          nullptr));
-         }
-         assert(actual_ops.size() == num_threads);
-         total_txn_count = 0;
-         for (auto &n : actual_ops) {
-            assert(n.valid());
-            total_txn_count += n.get();
-         }
-         if (pmode != no_progress) {
-            cout << "\n";
-         }
-      }
-      double load_duration = timer.End();
-      cout << "# Load throughput (KTPS)" << endl;
-      cout << props["dbname"] << '\t' << load_workload.filename << '\t'
-           << num_threads << '\t';
-      cout << total_txn_count / load_duration / 1000 << endl;
-      cout << "Load duration (sec):\t" << load_duration << endl;
-
-      db->PrintDBStats();
-   }
-
-   uint64_t ops_per_transactions = 1;
-
-   // Perform any Run phases
-   for (unsigned int i = 0; i < run_workloads.size(); i++) {
-      auto workload = run_workloads[i];
-      for (unsigned int i = 0; i < num_threads; ++i) {
-         wls[i].InitRunWorkload(workload.props, num_threads, i);
-      }
-      actual_ops.clear();
-      total_ops =
-         wls[i].max_txn_count() > 0
-            ? (wls[i].max_txn_count() * num_threads)
-            : stoi(
-               workload.props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-      if (db->IsTransactionSupported()) {
-         ops_per_transactions = stoi(workload.props.GetProperty(
-            ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
-            ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
-      }
-      uint64_t              run_progress = 0;
-      uint64_t              last_printed = 0;
       std::vector<uint64_t> txn_cnts(num_threads, 0);
       std::vector<uint64_t> abort_cnts(num_threads, 0);
 
       timer.Start();
       {
          for (unsigned int i = 0; i < num_threads; ++i) {
-            uint64_t start_op = (total_ops * i) / num_threads;
-            uint64_t end_op   = (total_ops * (i + 1)) / num_threads;
-            uint64_t num_transactions =
-               (end_op - start_op) / ops_per_transactions;
             actual_ops.emplace_back(async(launch::async,
-                                          DelegateClient,
+                                          DelegateTPCCClient,
                                           i,
                                           db,
-                                          &wls[i],
-                                          num_transactions,
-                                          false,
-                                          pmode,
-                                          total_ops,
-                                          &run_progress,
-                                          &last_printed,
+                                          &tpcc_wl,
                                           &txn_cnts[i],
                                           &abort_cnts[i]));
          }
          assert(actual_ops.size() == num_threads);
-         total_txn_count = 0;
          for (auto &n : actual_ops) {
             assert(n.valid());
-            total_txn_count += n.get();
+            n.get();
          }
          if (pmode != no_progress) {
             cout << "\n";
          }
       }
+
       double run_duration = timer.End();
 
-      total_ops = total_txn_count; // * ops_per_transactions;
+      uint64_t total_committed_cnt = 0;
+      uint64_t total_aborted_cnt   = 0;
 
-      cout << "# Transaction count:\t" << total_ops << endl;
-      unsigned long sum = 0;
       for (unsigned int i = 0; i < num_threads; ++i) {
          cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
               << ", abort_cnt: " << abort_cnts[i] << endl;
-         sum += txn_cnts[i];
+         total_committed_cnt += txn_cnts[i];
+         total_aborted_cnt += abort_cnts[i];
       }
-      assert(sum == total_txn_count);
 
-      cout << "# Transaction throughput (KTPS)" << endl;
-      cout << props["dbname"] << '\t' << workload.filename << '\t'
+      cout << "# Transaction goodput (KTPS)" << endl;
+      cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
            << num_threads << '\t';
-      cout << total_ops / run_duration / 1000 << endl;
+      cout << total_committed_cnt / run_duration / 1000 << endl;
       cout << "Run duration (sec):\t" << run_duration << endl;
 
-      const uint64_t total_abort_cnt =
-         std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
-      cout << "# Abort count:\t" << total_abort_cnt << '\n';
+      cout << "# Abort count:\t" << total_aborted_cnt << '\n';
       cout << "Abort rate:\t"
-           << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
+           << (double)total_aborted_cnt
+                 / (total_aborted_cnt + total_committed_cnt)
            << "\n";
+   } else {
+      db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
+      if (!db) {
+         cout << "Unknown database name " << props["dbname"] << endl;
+         exit(0);
+      }
 
-      db->PrintDBStats();
+      record_count =
+         stoi(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
+      uint64_t batch_size = sqrt(record_count);
+      if (record_count / batch_size < num_threads)
+         batch_size = record_count / num_threads;
+      if (batch_size < 1)
+         batch_size = 1;
+
+      ycsbc::BatchedCounterGenerator key_generator(
+         load_workload.preloaded ? record_count : 0, batch_size);
+      ycsbc::CoreWorkload wls[num_threads];
+      for (unsigned int i = 0; i < num_threads; ++i) {
+         wls[i].InitLoadWorkload(
+            load_workload.props, num_threads, i, &key_generator);
+      }
+
+      // Perform the Load phase
+      if (!load_workload.preloaded) {
+         timer.Start();
+         {
+            cout << "# Loading records:\t" << record_count << endl;
+            uint64_t load_progress = 0;
+            uint64_t last_printed  = 0;
+            for (unsigned int i = 0; i < num_threads; ++i) {
+               uint64_t start_op = (record_count * i) / num_threads;
+               uint64_t end_op   = (record_count * (i + 1)) / num_threads;
+               actual_ops.emplace_back(async(launch::async,
+                                             DelegateClient,
+                                             i,
+                                             db,
+                                             &wls[i],
+                                             end_op - start_op,
+                                             true,
+                                             pmode,
+                                             record_count,
+                                             &load_progress,
+                                             &last_printed,
+                                             nullptr,
+                                             nullptr));
+            }
+            assert(actual_ops.size() == num_threads);
+            total_txn_count = 0;
+            for (auto &n : actual_ops) {
+               assert(n.valid());
+               total_txn_count += n.get();
+            }
+            if (pmode != no_progress) {
+               cout << "\n";
+            }
+         }
+         double load_duration = timer.End();
+         cout << "# Load throughput (KTPS)" << endl;
+         cout << props["dbname"] << '\t' << load_workload.filename << '\t'
+              << num_threads << '\t';
+         cout << total_txn_count / load_duration / 1000 << endl;
+         cout << "Load duration (sec):\t" << load_duration << endl;
+
+         db->PrintDBStats();
+      }
+
+      uint64_t ops_per_transactions = 1;
+
+      // Perform any Run phases
+      for (unsigned int i = 0; i < run_workloads.size(); i++) {
+         auto workload = run_workloads[i];
+         for (unsigned int i = 0; i < num_threads; ++i) {
+            wls[i].InitRunWorkload(workload.props, num_threads, i);
+         }
+         actual_ops.clear();
+         total_ops =
+            wls[i].max_txn_count() > 0
+               ? (wls[i].max_txn_count() * num_threads)
+               : stoi(workload
+                         .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+         if (db->IsTransactionSupported()) {
+            ops_per_transactions = stoi(workload.props.GetProperty(
+               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
+               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
+         }
+         uint64_t              run_progress = 0;
+         uint64_t              last_printed = 0;
+         std::vector<uint64_t> txn_cnts(num_threads, 0);
+         std::vector<uint64_t> abort_cnts(num_threads, 0);
+
+         timer.Start();
+         {
+            for (unsigned int i = 0; i < num_threads; ++i) {
+               uint64_t start_op = (total_ops * i) / num_threads;
+               uint64_t end_op   = (total_ops * (i + 1)) / num_threads;
+               uint64_t num_transactions =
+                  (end_op - start_op) / ops_per_transactions;
+               actual_ops.emplace_back(async(launch::async,
+                                             DelegateClient,
+                                             i,
+                                             db,
+                                             &wls[i],
+                                             num_transactions,
+                                             false,
+                                             pmode,
+                                             total_ops,
+                                             &run_progress,
+                                             &last_printed,
+                                             &txn_cnts[i],
+                                             &abort_cnts[i]));
+            }
+            assert(actual_ops.size() == num_threads);
+            total_txn_count = 0;
+            for (auto &n : actual_ops) {
+               assert(n.valid());
+               total_txn_count += n.get();
+            }
+            if (pmode != no_progress) {
+               cout << "\n";
+            }
+         }
+         double run_duration = timer.End();
+
+         total_ops = total_txn_count; // * ops_per_transactions;
+
+         cout << "# Transaction count:\t" << total_ops << endl;
+         unsigned long sum = 0;
+         for (unsigned int i = 0; i < num_threads; ++i) {
+            cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
+                 << ", abort_cnt: " << abort_cnts[i] << endl;
+            sum += txn_cnts[i];
+         }
+         assert(sum == total_txn_count);
+
+         cout << "# Transaction throughput (KTPS)" << endl;
+         cout << props["dbname"] << '\t' << workload.filename << '\t'
+              << num_threads << '\t';
+         cout << total_ops / run_duration / 1000 << endl;
+         cout << "Run duration (sec):\t" << run_duration << endl;
+
+         const uint64_t total_abort_cnt =
+            std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
+         cout << "# Abort count:\t" << total_abort_cnt << '\n';
+         cout << "Abort rate:\t"
+              << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
+              << "\n";
+
+         db->PrintDBStats();
+      }
    }
-#endif
+
    delete db;
 }
 
@@ -463,6 +462,11 @@ ParseCommandLine(int                         argc,
    bool                saw_load_workload = false;
    WorkloadProperties *last_workload     = NULL;
    int                 argindex          = 1;
+
+   load_workload.filename  = "";
+   load_workload.preloaded = false;
+
+   props.SetProperty("benchmark", "ycsb");
 
    for (auto const &[key, val] : default_props) {
       props.SetProperty(key, val);
@@ -516,6 +520,17 @@ ParseCommandLine(int                         argc,
             exit(0);
          }
          props.SetProperty("slaves", argv[argindex]);
+         argindex++;
+      } else if (strcmp(argv[argindex], "-benchmark") == 0) {
+         argindex++;
+         if (argindex >= argc) {
+            UsageMessage(argv[0]);
+            exit(0);
+         }
+         props.SetProperty("benchmark", argv[argindex]);
+         argindex++;
+      } else if (strcmp(argv[argindex], "-upserts") == 0) {
+         tpcc::g_use_upserts = true;
          argindex++;
       } else if (strcmp(argv[argindex], "-W") == 0
                  || strcmp(argv[argindex], "-P") == 0
@@ -581,13 +596,12 @@ ParseCommandLine(int                         argc,
       }
    }
 
-#if TPCC == 1
-#else
-   if (argindex == 1 || argindex != argc || !saw_load_workload) {
+   if (argindex == 1 || argindex != argc
+       || (props.GetProperty("benchmark") == "ycsb" && !saw_load_workload))
+   {
       UsageMessage(argv[0]);
       exit(0);
    }
-#endif
 }
 
 void
