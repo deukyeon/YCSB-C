@@ -102,7 +102,7 @@ TPCCTransaction::gen_order_status(uint64_t thd_id) {
 }
 
 void TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db) {
-	printf("Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, g_cust_per_dist = %d\n", g_num_wh, g_max_items, g_cust_per_dist);
+	printf("Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, g_cust_per_dist = %d, g_max_txn_retry = %d, g_abort_penalty_us = %d\n", g_num_wh, g_max_items, g_cust_per_dist, g_max_txn_retry, g_abort_penalty_us);
 	_db = db;
 	// load all tables in the database
 	tpcc_buffer = new drand48_data * [g_num_wh];

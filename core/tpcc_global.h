@@ -44,10 +44,9 @@ uint64_t MakeNumberString(int min, int max, char* str, uint64_t thd_id);
 
 typedef struct {
 	uint64_t table;
-	uint64_t key;
-	uint64_t padding; // this is to make the key size 24
-					  // bytes to work with Icerberg and Splinter's
-					  // key-compare function
+	uint64_t key1;
+	uint64_t key2; // we need exactly 24 bytes keys to work with Iceberg
+                   // and Splinter's compare-key function
 } TPCCKey;
 
 // TPCC tables
