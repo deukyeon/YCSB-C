@@ -22,9 +22,9 @@ TPCCTransaction::gen_payment(uint64_t thd_id)
    type     = TPCC_PAYMENT;
    w_id     = thd_id % g_num_wh + 1;
    d_w_id   = w_id;
-   d_id     = URand(1, DIST_PER_WARE, w_id - 1);
-   h_amount = URand(1, 5000, w_id - 1);
-   int x    = URand(1, 100, w_id - 1);
+   d_id     = URand(1, DIST_PER_WARE, thd_id);
+   h_amount = URand(1, 5000, thd_id);
+   int x    = URand(1, 100, thd_id);
 
    if (x <= 85) {
       // home warehouse
@@ -32,15 +32,15 @@ TPCCTransaction::gen_payment(uint64_t thd_id)
       c_w_id = w_id;
    } else {
       // remote warehouse
-      c_d_id = URand(1, DIST_PER_WARE, w_id - 1);
+      c_d_id = URand(1, DIST_PER_WARE, thd_id);
       if (g_num_wh > 1) {
-         while ((c_w_id = URand(1, g_num_wh, w_id - 1)) == w_id) {
+         while ((c_w_id = URand(1, g_num_wh, thd_id)) == w_id) {
          }
       } else
          c_w_id = w_id;
    }
    // aaasz: we just lookup clients by their id
-   c_id = NURand(1023, 1, g_cust_per_dist, w_id - 1);
+   c_id = NURand(1023, 1, g_cust_per_dist, thd_id);
 }
 
 void
@@ -48,10 +48,10 @@ TPCCTransaction::gen_new_order(uint64_t thd_id)
 {
    type      = TPCC_NEW_ORDER;
    w_id      = thd_id % g_num_wh + 1;
-   d_id      = URand(1, DIST_PER_WARE, w_id - 1);
-   c_id      = NURand(1023, 1, g_cust_per_dist, w_id - 1);
-   rbk       = URand(1, 100, w_id - 1);
-   ol_cnt    = URand(5, 15, w_id - 1);
+   d_id      = URand(1, DIST_PER_WARE, thd_id);
+   c_id      = NURand(1023, 1, g_cust_per_dist, thd_id);
+   rbk       = URand(1, 100, thd_id);
+   ol_cnt    = URand(5, 15, thd_id);
    o_entry_d = 2023;
    items     = (item_no *)_mm_malloc(sizeof(item_no) * ol_cnt, 64);
    remote    = false;
@@ -59,17 +59,17 @@ TPCCTransaction::gen_new_order(uint64_t thd_id)
    // part_num = 1;
 
    for (uint32_t oid = 0; oid < ol_cnt; oid++) {
-      items[oid].ol_i_id = NURand(8191, 1, g_max_items, w_id - 1);
-      uint32_t x         = URand(1, 100, w_id - 1);
+      items[oid].ol_i_id = NURand(8191, 1, g_max_items, thd_id);
+      uint32_t x         = URand(1, 100, thd_id);
       if (x > 1 || g_num_wh == 1)
          items[oid].ol_supply_w_id = w_id;
       else {
-         while ((items[oid].ol_supply_w_id = URand(1, g_num_wh, w_id - 1))
+         while ((items[oid].ol_supply_w_id = URand(1, g_num_wh, thd_id))
                 == w_id) {
          }
          remote = true;
       }
-      items[oid].ol_quantity = URand(1, 10, w_id - 1);
+      items[oid].ol_quantity = URand(1, 10, thd_id);
    }
    // Remove duplicate items
    // for (uint32_t i = 0; i < ol_cnt; i ++) {
@@ -95,24 +95,24 @@ TPCCTransaction::gen_order_status(uint64_t thd_id)
    // if (FIRST_PART_LOCAL)
    // 	w_id = thd_id % g_num_wh + 1;
    // else
-   // 	w_id = URand(1, g_num_wh, thd_id % g_num_wh);
-   // d_id = URand(1, DIST_PER_WARE, w_id-1);
+   // 	w_id = URand(1, g_num_wh, thd_id);
+   // d_id = URand(1, DIST_PER_WARE, thd_id);
    // c_w_id = w_id;
    // c_d_id = d_id;
-   // int y = URand(1, 100, w_id-1);
+   // int y = URand(1, 100, thd_id);
    // if(y <= 60) {
    // 	// by last name
    // 	by_last_name = true;
-   // 	Lastname(NURand(255,0,999,w_id-1),c_last);
+   // 	Lastname(NURand(255,0,999,thd_id),c_last);
    // } else {
    // 	// by cust id
    // 	by_last_name = false;
-   // 	c_id = NURand(1023, 1, g_cust_per_dist, w_id-1);
+   // 	c_id = NURand(1023, 1, g_cust_per_dist, thd_id);
    // }
 }
 
 void
-TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db)
+TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db, uint64_t num_client_threads)
 {
    printf(
       "Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, "
@@ -124,7 +124,7 @@ TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db)
       g_abort_penalty_us);
    _db = db;
    // load all tables in the database
-   tpcc_buffer = new drand48_data *[g_num_wh];
+   tpcc_buffer = new drand48_data *[num_client_threads + g_num_wh];
    pthread_t   p_thds[g_num_wh];
    thread_args a[g_num_wh];
    for (uint32_t i = 0; i < g_num_wh; i++) {

@@ -1,7 +1,6 @@
 #ifndef _TPCC_CONFIG_H_
 #   define _TPC__CONFIG_H_
 
-#   define THREAD_CNT       4
 #   define ABORT_PENALTY_US 100
 #   define MAX_TXN_RETRY    0
 

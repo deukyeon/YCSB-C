@@ -5,7 +5,6 @@ namespace tpcc {
 drand48_data **tpcc_buffer;
 
 uint32_t g_abort_penalty_us = ABORT_PENALTY_US;
-uint32_t g_thread_cnt       = THREAD_CNT;
 uint32_t g_num_wh           = NUM_WH;
 double   g_perc_payment     = PERC_PAYMENT;
 bool     g_wh_update        = WH_UPDATE;

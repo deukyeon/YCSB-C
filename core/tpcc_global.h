@@ -25,7 +25,6 @@ typedef uint64_t ts_t; // time stamp type
 /******************************************/
 // Global Parameters
 /******************************************/
-extern uint32_t g_thread_cnt;
 extern uint32_t g_abort_penalty_us;
 extern uint32_t g_num_wh;
 extern double   g_perc_payment;

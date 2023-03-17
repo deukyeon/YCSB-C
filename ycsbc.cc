@@ -248,7 +248,7 @@ main(const int argc, const char *argv[])
 
       tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
       tpcc_wl.init(
-         (ycsbc::TransactionalSplinterDB *)db); // loads TPCC tables into DB
+                   (ycsbc::TransactionalSplinterDB *)db, num_threads); // loads TPCC tables into DB
 
       std::vector<uint64_t> txn_cnts(num_threads, 0);
       std::vector<uint64_t> abort_cnts(num_threads, 0);

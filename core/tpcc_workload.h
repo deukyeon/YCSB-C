@@ -214,7 +214,7 @@ private:
 class TPCCWorkload {
 public:
    void
-   init(ycsbc::TransactionalSplinterDB *db);
+   init(ycsbc::TransactionalSplinterDB *db, uint64_t num_client_threads);
    int
    run_transaction(TPCCTransaction *txn);
 
