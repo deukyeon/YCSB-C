@@ -152,7 +152,7 @@ def main(argc, argv):
 
     cmds = []
     thread = max_num_threads
-    thetas = [0, 0.4, 0.8, 0.9, 0.99]
+    thetas = [0, 0.8, 0.9, 0.95, 0.99]
     for theta in thetas:
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -w theta {theta}'
         cmds.append(cmd)
