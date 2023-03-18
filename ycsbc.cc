@@ -317,9 +317,11 @@ main(const int argc, const char *argv[])
       ycsbc::BatchedCounterGenerator key_generator(
          load_workload.preloaded ? record_count : 0, batch_size);
       ycsbc::CoreWorkload wls[num_threads];
-      for (unsigned int i = 0; i < num_threads; ++i) {
-         wls[i].InitLoadWorkload(
-            load_workload.props, num_threads, i, &key_generator);
+
+      unsigned int thr_i;
+      for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+         wls[thr_i].InitLoadWorkload(
+            load_workload.props, num_threads, thr_i, &key_generator);
       }
 
       // Perform the Load phase
@@ -329,14 +331,14 @@ main(const int argc, const char *argv[])
             cout << "# Loading records:\t" << record_count << endl;
             uint64_t load_progress = 0;
             uint64_t last_printed  = 0;
-            for (unsigned int i = 0; i < num_threads; ++i) {
-               uint64_t start_op = (record_count * i) / num_threads;
-               uint64_t end_op   = (record_count * (i + 1)) / num_threads;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               uint64_t start_op = (record_count * thr_i) / num_threads;
+               uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
                actual_ops.emplace_back(async(launch::async,
                                              DelegateClient,
-                                             i,
+                                             thr_i,
                                              db,
-                                             &wls[i],
+                                             &wls[thr_i],
                                              end_op - start_op,
                                              true,
                                              pmode,
@@ -369,15 +371,16 @@ main(const int argc, const char *argv[])
       uint64_t ops_per_transactions = 1;
 
       // Perform any Run phases
-      for (unsigned int i = 0; i < run_workloads.size(); i++) {
-         auto workload = run_workloads[i];
-         for (unsigned int i = 0; i < num_threads; ++i) {
-            wls[i].InitRunWorkload(workload.props, num_threads, i);
+      for (const auto &workload : run_workloads) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+            wls[thr_i].InitRunWorkload(workload.props, num_threads, thr_i);
          }
          actual_ops.clear();
+         uint64_t max_txn_count = stoi(workload.props.GetProperty(
+            ycsbc::CoreWorkload::MAX_TXN_COUNT_PROPERTY, "0"));
          total_ops =
-            wls[i].max_txn_count() > 0
-               ? (wls[i].max_txn_count() * num_threads)
+            max_txn_count > 0
+               ? max_txn_count * num_threads
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
          if (db->IsTransactionSupported()) {
@@ -392,24 +395,24 @@ main(const int argc, const char *argv[])
 
          timer.Start();
          {
-            for (unsigned int i = 0; i < num_threads; ++i) {
-               uint64_t start_op = (total_ops * i) / num_threads;
-               uint64_t end_op   = (total_ops * (i + 1)) / num_threads;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               uint64_t start_op = (total_ops * thr_i) / num_threads;
+               uint64_t end_op   = (total_ops * (thr_i + 1)) / num_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
                actual_ops.emplace_back(async(launch::async,
                                              DelegateClient,
-                                             i,
+                                             thr_i,
                                              db,
-                                             &wls[i],
+                                             &wls[thr_i],
                                              num_transactions,
                                              false,
                                              pmode,
                                              total_ops,
                                              &run_progress,
                                              &last_printed,
-                                             &txn_cnts[i],
-                                             &abort_cnts[i]));
+                                             &txn_cnts[thr_i],
+                                             &abort_cnts[thr_i]));
             }
             assert(actual_ops.size() == num_threads);
             total_txn_count = 0;
@@ -423,14 +426,18 @@ main(const int argc, const char *argv[])
          }
          double run_duration = timer.End();
 
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+            wls[thr_i].DeinitRunWorkload();
+         }
+
          total_ops = total_txn_count; // * ops_per_transactions;
 
          cout << "# Transaction count:\t" << total_ops << endl;
          unsigned long sum = 0;
-         for (unsigned int i = 0; i < num_threads; ++i) {
-            cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
-                 << ", abort_cnt: " << abort_cnts[i] << endl;
-            sum += txn_cnts[i];
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+            cout << "[Client " << thr_i << "] txn_cnt: " << txn_cnts[thr_i]
+                 << ", abort_cnt: " << abort_cnts[thr_i] << endl;
+            sum += txn_cnts[thr_i];
          }
          assert(sum == total_txn_count);
 

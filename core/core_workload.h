@@ -22,8 +22,6 @@
 namespace ycsbc {
 
 enum Operation { INSERT, READ, UPDATE, SCAN, READMODIFYWRITE };
-std::ostream &
-operator<<(std::ostream &out, const ycsbc::Operation value);
 
 class CoreWorkload {
 public:
@@ -164,10 +162,17 @@ public:
                     unsigned int             nthreads,
                     unsigned int             this_thread,
                     BatchedCounterGenerator *key_generator);
+
+   virtual void
+   DeinitLoadWorkload();
+
    virtual void
    InitRunWorkload(const utils::Properties &p,
                    unsigned int             nthreads,
                    unsigned int             this_thread);
+
+   virtual void
+   DeinitRunWorkload();
 
    void
    InitKeyBuffer(std::string &buffer);
@@ -255,14 +260,8 @@ public:
 
    virtual ~CoreWorkload()
    {
-      if (field_len_generator_)
-         delete field_len_generator_;
-      if (key_chooser_)
-         delete key_chooser_;
-      if (field_chooser_)
-         delete field_chooser_;
-      if (scan_len_chooser_)
-         delete scan_len_chooser_;
+      DeinitLoadWorkload();
+      DeinitRunWorkload();
    }
 
 protected:
@@ -363,5 +362,8 @@ CoreWorkload::NextFieldName()
 }
 
 } // namespace ycsbc
+
+std::ostream &
+operator<<(std::ostream &out, const ycsbc::Operation value);
 
 #endif // YCSB_C_CORE_WORKLOAD_H_

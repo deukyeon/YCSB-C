@@ -26,7 +26,8 @@ public:
    {}
    void
    AddValue(Value value, double weight);
-
+   void
+   Clear();
    Value
    Next();
    Value
@@ -52,6 +53,14 @@ DiscreteGenerator<Value>::AddValue(Value value, double weight)
    }
    values_.push_back(std::make_pair(value, weight));
    sum_ += weight;
+}
+
+template<typename Value>
+inline void
+DiscreteGenerator<Value>::Clear()
+{
+   values_.clear();
+   sum_ = 0;
 }
 
 template<typename Value>

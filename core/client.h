@@ -198,19 +198,9 @@ Client::DoTransactionalOperations()
 {
    int num_ops = workload_.ops_per_transaction();
 
-   //   double r = 0;
-   //   drand48_r(&drand_buffer, &r);
-   //   num_ops = r < 0.1 ? 32 : num_ops;
-
-   for (int i = 0; i < num_ops; ++i)
-   // while (operations_in_transaction.size()
-   //        < (size_t)num_ops)
-   {
+   // for (int i = 0; i < num_ops; ++i)
+   while (operations_in_transaction.size() < (size_t)num_ops) {
       Operation op = workload_.NextOperation();
-
-      // if (num_ops == 4) {
-      //    op = UPDATE;
-      // }
 
       ClientOperation client_op;
 
@@ -237,7 +227,7 @@ Client::DoTransactionalOperations()
    }
 
    // for (auto &op : operations_in_transaction) {
-   //   std::cout << op.op << " " << op.key << std::endl;
+   //    std::cout << op.op << " " << op.key << std::endl;
    // }
    // std::cout << "---" << std::endl;
 

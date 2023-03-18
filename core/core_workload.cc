@@ -142,6 +142,15 @@ CoreWorkload::InitLoadWorkload(const utils::Properties &p,
    batch_remaining_ = key_generator_->BatchSize();
 }
 
+void
+CoreWorkload::DeinitLoadWorkload()
+{
+   if (field_len_generator_) {
+      delete field_len_generator_;
+      field_len_generator_ = nullptr;
+   }
+}
+
 
 void
 CoreWorkload::InitRunWorkload(const utils::Properties &p,
@@ -240,6 +249,24 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
    }
 
    // batch_size_ = 1;
+}
+
+void
+CoreWorkload::DeinitRunWorkload()
+{
+   op_chooser_.Clear();
+   if (key_chooser_) {
+      delete key_chooser_;
+      key_chooser_ = nullptr;
+   }
+   if (field_chooser_) {
+      delete field_chooser_;
+      field_chooser_ = nullptr;
+   }
+   if (scan_len_chooser_) {
+      delete scan_len_chooser_;
+      scan_len_chooser_ = nullptr;
+   }
 }
 
 ycsbc::Generator<uint64_t> *
