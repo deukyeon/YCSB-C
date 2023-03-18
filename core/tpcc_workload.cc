@@ -51,9 +51,8 @@ TPCCTransaction::gen_new_order(uint64_t thd_id)
    d_id      = URand(1, DIST_PER_WARE, thd_id);
    c_id      = NURand(1023, 1, g_cust_per_dist, thd_id);
    rbk       = URand(1, 100, thd_id);
-   ol_cnt    = URand(5, 15, thd_id);
+   ol_cnt    = URand(5, MAX_OL_PER_ORDER, thd_id);
    o_entry_d = 2023;
-   items     = (item_no *)_mm_malloc(sizeof(item_no) * ol_cnt, 64);
    remote    = false;
    // part_to_access[0] = wh_to_part(w_id);
    // part_num = 1;
@@ -127,9 +126,9 @@ TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db,
       g_total_num_transactions);
    _db = db;
    // load all tables in the database
-   tpcc_buffer = new drand48_data [num_client_threads + g_num_wh];
+   tpcc_buffer = new drand48_data[num_client_threads + g_num_wh];
    for (unsigned int i = 0; i < num_client_threads + g_num_wh; i++) {
-     srand48_r(i, &tpcc_buffer[i]);
+      srand48_r(i, &tpcc_buffer[i]);
    }
    pthread_t   p_thds[g_num_wh];
    thread_args a[g_num_wh];
@@ -143,12 +142,18 @@ TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db,
    printf("TPCC Data Initialization Complete!\n");
 }
 
+void
+TPCCWorkload::deinit()
+{
+   delete[] tpcc_buffer;
+}
+
 void *
 TPCCWorkload::thread_init_tables(void *args)
 {
    TPCCWorkload::thread_args *a = (TPCCWorkload::thread_args *)args;
    a->wl->_db->Init();
-   uint32_t wid        = a->tid + 1;
+   uint32_t wid = a->tid + 1;
    assert((uint64_t)a->tid < g_num_wh);
 
    if (a->tid == 0)

@@ -7,7 +7,6 @@
 #include <string.h>
 #include <cassert>
 #include <pthread.h>
-#include <mm_malloc.h>
 #include "tpcc_config.h"
 #include "tpcc_global.h"
 #include "tpcc_client.h"
@@ -187,7 +186,7 @@ public:
       uint64_t ol_supply_w_id;
       uint64_t ol_quantity;
    };
-   item_no *items;
+   item_no  items[MAX_OL_PER_ORDER];
    bool     rbk;
    bool     remote;
    uint64_t ol_cnt;
@@ -215,6 +214,9 @@ class TPCCWorkload {
 public:
    void
    init(ycsbc::TransactionalSplinterDB *db, uint64_t num_client_threads);
+   void
+   deinit();
+
    int
    run_transaction(TPCCTransaction *txn);
 

@@ -276,6 +276,8 @@ main(const int argc, const char *argv[])
 
       double run_duration = timer.End();
 
+      tpcc_wl.deinit();
+
       uint64_t total_committed_cnt = 0;
       uint64_t total_aborted_cnt   = 0;
 
