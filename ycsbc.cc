@@ -369,18 +369,19 @@ main(const int argc, const char *argv[])
       }
 
       uint64_t ops_per_transactions = 1;
-
       // Perform any Run phases
       for (const auto &workload : run_workloads) {
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-            wls[thr_i].InitRunWorkload(workload.props, num_threads, thr_i);
+         unsigned int num_run_threads = stoi(
+            workload.props.GetProperty("threads", std::to_string(num_threads)));
+         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+            wls[thr_i].InitRunWorkload(workload.props, num_run_threads, thr_i);
          }
          actual_ops.clear();
          uint64_t max_txn_count = stoi(workload.props.GetProperty(
             ycsbc::CoreWorkload::MAX_TXN_COUNT_PROPERTY, "0"));
          total_ops =
             max_txn_count > 0
-               ? max_txn_count * num_threads
+               ? max_txn_count * num_run_threads
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
          if (db->IsTransactionSupported()) {
@@ -390,14 +391,14 @@ main(const int argc, const char *argv[])
          }
          uint64_t              run_progress = 0;
          uint64_t              last_printed = 0;
-         std::vector<uint64_t> txn_cnts(num_threads, 0);
-         std::vector<uint64_t> abort_cnts(num_threads, 0);
+         std::vector<uint64_t> txn_cnts(num_run_threads, 0);
+         std::vector<uint64_t> abort_cnts(num_run_threads, 0);
 
          timer.Start();
          {
-            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-               uint64_t start_op = (total_ops * thr_i) / num_threads;
-               uint64_t end_op   = (total_ops * (thr_i + 1)) / num_threads;
+            for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+               uint64_t start_op = (total_ops * thr_i) / num_run_threads;
+               uint64_t end_op   = (total_ops * (thr_i + 1)) / num_run_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
                actual_ops.emplace_back(async(launch::async,
@@ -414,7 +415,7 @@ main(const int argc, const char *argv[])
                                              &txn_cnts[thr_i],
                                              &abort_cnts[thr_i]));
             }
-            assert(actual_ops.size() == num_threads);
+            assert(actual_ops.size() == num_run_threads);
             total_txn_count = 0;
             for (auto &n : actual_ops) {
                assert(n.valid());
@@ -426,7 +427,7 @@ main(const int argc, const char *argv[])
          }
          double run_duration = timer.End();
 
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             wls[thr_i].DeinitRunWorkload();
          }
 
@@ -434,7 +435,7 @@ main(const int argc, const char *argv[])
 
          cout << "# Transaction count:\t" << total_ops << endl;
          unsigned long sum = 0;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             cout << "[Client " << thr_i << "] txn_cnt: " << txn_cnts[thr_i]
                  << ", abort_cnt: " << abort_cnts[thr_i] << endl;
             sum += txn_cnts[thr_i];
@@ -443,7 +444,7 @@ main(const int argc, const char *argv[])
 
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
-              << num_threads << '\t';
+              << num_run_threads << '\t';
          cout << total_ops / run_duration / 1000 << endl;
          cout << "Run duration (sec):\t" << run_duration << endl;
 
