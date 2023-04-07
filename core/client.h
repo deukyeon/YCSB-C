@@ -190,6 +190,7 @@ Client::DoOperation()
    }
    assert(status >= 0);
 
+   ++txn_cnt;
    return true;
 }
 

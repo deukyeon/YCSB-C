@@ -52,7 +52,7 @@ std::map<string, string> default_props = {
    // All these options use splinterdb's internal defaults
    {"splinterdb.page_size", "0"},
    {"splinterdb.extent_size", "0"},
-   {"splinterdb.io_flags", "0"}, // "16450"}, // O_CREAT | O_RDWR | O_DIRECT
+   {"splinterdb.io_flags", "16450"}, // O_CREAT | O_RDWR | O_DIRECT
    {"splinterdb.io_perms", "0"},
    {"splinterdb.io_async_queue_depth", "0"},
    {"splinterdb.cache_use_stats", "0"},
@@ -299,6 +299,8 @@ main(const int argc, const char *argv[])
            << (double)total_aborted_cnt
                  / (total_aborted_cnt + total_committed_cnt)
            << "\n";
+
+      db->PrintDBStats();
    } else {
       db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
       if (!db) {
