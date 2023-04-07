@@ -10,6 +10,6 @@ do
     for workload in write_intensive rmw_intensive
     do
 	python run_exp.py $sys $workload
-    doen
+    done
 done
 
