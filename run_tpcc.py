@@ -3,7 +3,7 @@ import subprocess
 import sys
 
 available_systems = [
-    'splinterdb',
+#    'splinterdb',
     'tictoc-disk',
     'silo-disk',
     'baseline-serial',
@@ -14,7 +14,7 @@ available_systems = [
 ]
 
 system_branch_map = {
-    'splinterdb': 'deukyeon/tictoc',
+#    'splinterdb': 'deukyeon/tictoc',
     'tictoc-disk': 'deukyeon/fantastiCC-refactor',
     'silo-disk': 'deukyeon/silo-disk',
     'baseline-serial': 'deukyeon/baseline',
@@ -32,6 +32,10 @@ system_sed_map = {
 }
 
 systems_with_iceberg = [k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
+
+system_with_locktable = {
+    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_ATOMIC_WORD [ ]*1/#define EXPERIMENTAL_MODE_ATOMIC_WORD 0/g', 'src/experimental_mode.h'],
+}
 
 def printHelp():
     print("Usage:", sys.argv[0], "[system] [workload]", file=sys.stderr)
@@ -68,6 +72,8 @@ def buildSystem(sys):
     run_shell_command('make clean')
     if sys in system_sed_map:
         run_shell_command(system_sed_map[sys], parse=False)
+    if sys in system_with_locktable:
+        run_shell_command(system_with_locktable[sys], parse=False)
     run_shell_command('make')
     os.chdir(current_dir)
 
@@ -161,6 +167,8 @@ def main(argc, argv):
         for wh in num_warehouses:
             change_num_warehouses(wh)
             log_path = f'/tmp/{label}-wh{wh}.{i}.log'
+            if os.path.isfile(log_path):
+                continue
             logfile = open(log_path, 'w')
             for cmd in cmds:
                 logfile.write(f'{cmd}\n')
