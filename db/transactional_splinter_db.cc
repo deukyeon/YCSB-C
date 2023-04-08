@@ -138,7 +138,7 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    //                                &value);
    // result.emplace_back(make_pair(key, (char *)slice_data(value)));
 
-   // splinterdb_lookup_result_deinit(&lookup_result);
+   splinterdb_lookup_result_deinit(&lookup_result);
    return DB::kOK;
 }
 
@@ -372,6 +372,7 @@ TransactionalSplinterDB::Read(Transaction *txn,
    // cout << "done lookup " << key << endl;
 
    // TODO: transactional_splinterdb_lookup_result_deinit();
+   splinterdb_lookup_result_deinit(&lookup_result);
    return DB::kOK;
 }
 
