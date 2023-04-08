@@ -34,6 +34,10 @@ system_sed_map = {
 systems_with_iceberg = [
     k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
 
+system_with_locktable = {
+    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_ATOMIC_WORD [ ]*1/#define EXPERIMENTAL_MODE_ATOMIC_WORD 0/g', 'src/experimental_mode.h']
+}
+
 available_workloads = [
     'high_contention',
     'medium_contention',
@@ -78,6 +82,8 @@ def buildSystem(sys):
     run_shell_command('make clean')
     if sys in system_sed_map:
         run_shell_command(system_sed_map[sys], parse=False)
+    if sys in system_with_locktable:
+        run_shell_command(system_with_locktable[sys], parse=False)
     run_shell_command('make')
     os.chdir(current_dir)
     run_shell_command('make clean')
