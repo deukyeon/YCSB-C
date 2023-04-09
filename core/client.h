@@ -150,9 +150,9 @@ Client::DoInsert()
 inline bool
 Client::DoTransaction()
 {
-   if (db_.IsTransactionSupported()) {
+  //   if (db_.IsTransactionSupported()) {
       return DoTransactionalOperations();
-   }
+      //   }
 
    return DoOperation();
 }

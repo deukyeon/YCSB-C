@@ -121,7 +121,7 @@ public:
    virtual int
    Commit(Transaction **txn)
    {
-      return 0;
+      return kOK;
    }
 
    ///

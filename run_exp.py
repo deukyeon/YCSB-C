@@ -43,8 +43,10 @@ available_workloads = [
     'medium_contention',
     'write_intensive',
     'write_intensive_10M',
+    'write_intensive_10M_16ops',
     'rmw_intensive',
     'rmw_intensive_10M',
+    'rmw_intensive_10M_16ops',
 ]
 
 
@@ -150,9 +152,22 @@ def main(argc, argv):
     if conf not in available_workloads:
         printHelp()
 
-    buildSystem(system)
+    parse_result_only = False
+    if len(argv) > 3:
+        parse_result_only = bool(argv[3])
 
     label = system + '-' + conf
+    csv_path = f'{label}.csv'
+    csv = open(csv_path, 'w')
+    print("system,conf,threads,load,goodput,aborts,abort_rate,seq", file=csv)
+    num_repeats = 5
+    if parse_result_only:
+        for i in range(0, num_repeats):
+            log_path = f'/tmp/{label}.{i}.log'
+            parseLogfile(log_path, csv, system, conf, i)
+        return
+
+    buildSystem(system)
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
     spec_file = 'workloads/' + conf + '.spec'
@@ -170,9 +185,7 @@ def main(argc, argv):
         cpulist_str = ",".join(map(str, cpulist[:thread]))
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1'
         cmds.append(cmd)
-    csv = open(f'{label}.csv', 'w')
-    print("system,conf,threads,load,goodput,aborts,abort_rate,seq", file=csv)
-    num_repeats = 5
+
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
         if os.path.isfile(log_path):
@@ -181,7 +194,6 @@ def main(argc, argv):
         specfile = open(spec_file, 'r')
         logfile.writelines(specfile.readlines())
         specfile.close()
-
         for cmd in cmds:
             # run_shell_command('fallocate -l 500GB splinterdb.db')
             logfile.write(f'{cmd}\n')
@@ -190,7 +202,7 @@ def main(argc, argv):
             out, _ = run_shell_command(cmd, shell=True)
             if out:
                 logfile.write(out.decode())
-            run_shell_command('rm -f splinterdb.db')
+            # run_shell_command('rm -f splinterdb.db')
         logfile.close()
         parseLogfile(log_path, csv, system, conf, i)
     csv.close()

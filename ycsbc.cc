@@ -379,18 +379,17 @@ main(const int argc, const char *argv[])
             wls[thr_i].InitRunWorkload(workload.props, num_run_threads, thr_i);
          }
          actual_ops.clear();
+
+	 ops_per_transactions = stoi(workload.props.GetProperty(
+               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
+               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
          uint64_t max_txn_count = stoi(workload.props.GetProperty(
             ycsbc::CoreWorkload::MAX_TXN_COUNT_PROPERTY, "0"));
          total_ops =
             max_txn_count > 0
-               ? max_txn_count * num_run_threads
+               ? max_txn_count * num_run_threads * ops_per_transactions
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-         if (db->IsTransactionSupported()) {
-            ops_per_transactions = stoi(workload.props.GetProperty(
-               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
-               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
-         }
          uint64_t              run_progress = 0;
          uint64_t              last_printed = 0;
          std::vector<uint64_t> txn_cnts(num_run_threads, 0);
