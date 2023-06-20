@@ -10,7 +10,8 @@ available_systems = [
     'baseline-parallel',
     'silo-memory',
     'tictoc-memory',
-    'fantastiCC'
+    'tictoc-singlecounter',
+    'tictoc-sketch'
 ]
 
 system_branch_map = {
@@ -21,21 +22,21 @@ system_branch_map = {
     'baseline-parallel': 'deukyeon/baseline',
     'silo-memory': 'deukyeon/fantastiCC-refactor',
     'tictoc-memory': 'deukyeon/fantastiCC-refactor',
-    'fantastiCC': 'deukyeon/fantastiCC-refactor'
+    'tictoc-singlecounter': 'deukyeon/fantastiCC-refactor',
+    'tictoc-sketch': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
-    'baseline-parallel': ['sed', '-i', 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g', 'src/transaction_private.h'],
-    'silo-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g', 'src/experimental_mode.h'],
-    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g', 'src/experimental_mode.h'],
-    'tictoc-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g', 'src/experimental_mode.h']
-}
-
-systems_with_iceberg = [
-    k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
-
-system_with_locktable = {
-    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_ATOMIC_WORD [ ]*1/#define EXPERIMENTAL_MODE_ATOMIC_WORD 0/g', 'src/experimental_mode.h']
+    'baseline-parallel': ["sed -i 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g' src/transaction_private.h"],
+    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h",
+                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h",
+                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
+                      "sed -i 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g' src/experimental_mode.h",
+                      "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
+                             "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
 }
 
 available_workloads = [
@@ -44,9 +45,12 @@ available_workloads = [
     'write_intensive',
     'write_intensive_10M',
     'write_intensive_10M_16ops',
+    'write_intensive_10M_uniform',
     'rmw_intensive',
     'rmw_intensive_10M',
     'rmw_intensive_10M_16ops',
+    'rmw_intensive_10M_uniform',
+    'read_intensive_10M'
 ]
 
 
@@ -78,15 +82,11 @@ def buildSystem(sys):
     os.chdir(splinterdb_dir)
     run_shell_command('git checkout -- .')
     run_shell_command(f'git checkout {system_branch_map[sys]}')
-    if sys in systems_with_iceberg:
-        run_shell_command(
-            'git submodule update --init --recursive third-party')
-    run_shell_command('make clean')
+    run_shell_command('sudo -E make clean')
     if sys in system_sed_map:
-        run_shell_command(system_sed_map[sys], parse=False)
-    if sys in system_with_locktable:
-        run_shell_command(system_with_locktable[sys], parse=False)
-    run_shell_command('make')
+        for sed in system_sed_map[sys]:
+            run_shell_command(sed, shell=True)
+    run_shell_command('sudo -E make install')
     os.chdir(current_dir)
     run_shell_command('make clean')
     run_shell_command('make')
