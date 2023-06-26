@@ -3,38 +3,40 @@ import subprocess
 import sys
 
 available_systems = [
-#    'splinterdb',
+    'splinterdb',
     'tictoc-disk',
     'silo-disk',
     'baseline-serial',
     'baseline-parallel',
     'silo-memory',
     'tictoc-memory',
-    'fantastiCC'
+    'tictoc-singlecounter',
+    'tictoc-sketch'
 ]
 
 system_branch_map = {
-#    'splinterdb': 'deukyeon/tictoc',
+    'splinterdb': 'deukyeon/fantastiCC-refactor',
     'tictoc-disk': 'deukyeon/fantastiCC-refactor',
     'silo-disk': 'deukyeon/silo-disk',
     'baseline-serial': 'deukyeon/baseline',
     'baseline-parallel': 'deukyeon/baseline',
     'silo-memory': 'deukyeon/fantastiCC-refactor',
     'tictoc-memory': 'deukyeon/fantastiCC-refactor',
-    'fantastiCC': 'deukyeon/fantastiCC-refactor'
+    'tictoc-singlecounter': 'deukyeon/fantastiCC-refactor',
+    'tictoc-sketch': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
-    'baseline-parallel': ['sed', '-i', 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g', 'src/transaction_private.h'],
-    'silo-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g', 'src/experimental_mode.h'],
-    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g', 'src/experimental_mode.h'],
-    'tictoc-memory': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g', 'src/experimental_mode.h']
-}
-
-systems_with_iceberg = [k for k, v in system_branch_map.items() if v == 'deukyeon/fantastiCC-refactor']
-
-system_with_locktable = {
-    'tictoc-disk': ['sed', '-i', 's/#define EXPERIMENTAL_MODE_ATOMIC_WORD [ ]*1/#define EXPERIMENTAL_MODE_ATOMIC_WORD 0/g', 'src/experimental_mode.h'],
+    'baseline-parallel': ["sed -i 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g' src/transaction_private.h"],
+    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h",
+                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h",
+                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
+                      "sed -i 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g' src/experimental_mode.h",
+                      "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'tictoc-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
+                             "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
 }
 
 def printHelp():
@@ -67,15 +69,14 @@ def buildSystem(sys):
     os.chdir(splinterdb_dir)
     run_shell_command('git checkout -- .')
     run_shell_command(f'git checkout {system_branch_map[sys]}')
-    if sys in systems_with_iceberg:
-        run_shell_command('git submodule update --init --recursive third-party')
-    run_shell_command('make clean')
+    run_shell_command('sudo -E make clean')
     if sys in system_sed_map:
-        run_shell_command(system_sed_map[sys], parse=False)
-    if sys in system_with_locktable:
-        run_shell_command(system_with_locktable[sys], parse=False)
-    run_shell_command('make')
+        for sed in system_sed_map[sys]:
+            run_shell_command(sed, shell=True)
+    run_shell_command('sudo -E make install')
     os.chdir(current_dir)
+    run_shell_command('make clean')
+    run_shell_command('make')
 
 
 def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
@@ -132,14 +133,28 @@ def main(argc, argv):
     conf = 'tpcc'
 
     upsert_opt = ''
-    if len(argv) > 2:
-        assert(argv[2] == 'upsert')
+    if len(argv) > 2 and argv[2] == 'upsert':
         conf = 'tpcc-upsert'
         upsert_opt = '-upserts'
 
-    buildSystem(system)
+    parse_result_only = False
+    if len(argv) > 3:
+        parse_result_only = bool(argv[3])
+
+    num_repeats = 5
+    num_warehouses = [4, 8, 32]
 
     label = system + '-' + conf
+    csv = open(f'{label}.csv', 'w')
+    print("system,conf,num_wh,threads,goodput,aborts,abort_rate,seq", file=csv)
+    if parse_result_only:
+        for i in range(0, num_repeats):
+            for wh in num_warehouses:
+                log_path = f'/tmp/{label}-wh{wh}.{i}.log'
+                parseLogfile(log_path, csv, system, conf, i, wh)
+        return
+
+    buildSystem(system)
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
 
@@ -150,8 +165,6 @@ def main(argc, argv):
         cpulist.append(i)
         cpulist.append(i + 16)
 
-    num_warehouses = [4, 8, 32]
-
     splinterdb_opts = '-p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 32000'
 
     cmds = []
@@ -160,9 +173,6 @@ def main(argc, argv):
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
         cmds.append(cmd)
 
-    csv = open(f'{label}.csv', 'w')
-    print("system,conf,num_wh,threads,goodput,aborts,abort_rate,seq", file=csv)
-    num_repeats = 1
     for i in range(0, num_repeats):
         for wh in num_warehouses:
             change_num_warehouses(wh)
