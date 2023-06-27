@@ -260,9 +260,17 @@ Client::DoTransactionalOperations()
                throw utils::Exception("Operation request is not recognized!");
          }
          assert(status >= 0);
+         if (status != 0) {
+            is_abort = true;
+            break;
+         }
       }
 
-      if ((is_abort = (db_.Commit(&txn) == DB::kErrorConflict))) {
+      if (!is_abort) {
+         is_abort = (db_.Commit(&txn) == DB::kErrorConflict);
+      }
+
+      if (is_abort) {
          ++abort_cnt;
          const int sleep_for =
             std::pow(2.0, retry * workload_.min_txn_abort_panelty_us());
