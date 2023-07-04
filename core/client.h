@@ -301,12 +301,16 @@ Client::TransactionRead(Transaction *txn, ClientOperation &client_op)
 inline int
 Client::TransactionReadModifyWrite(Transaction *txn, ClientOperation &client_op)
 {
+   int ret;
    if (!workload_.read_all_fields()) {
-      db_.Read(
+      ret = db_.Read(
          txn, client_op.table, client_op.key, &client_op.read_fields, pairs);
    } else {
-      db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
+      ret = db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
    }
+
+   if (ret != 0) return ret;
+
    return db_.Insert(txn, client_op.table, client_op.key, client_op.values);
 }
 
