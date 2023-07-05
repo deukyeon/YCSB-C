@@ -298,7 +298,20 @@ TransactionalSplinterDB::Insert(const std::string   &table,
                                 const std::string   &key,
                                 std::vector<KVPair> &values)
 {
-   return Insert(NULL, table, key, values);
+  
+   assert(values.size() == 1);
+
+   std::string val       = values[0].second;
+   slice       key_slice = slice_create(key.size(), key.c_str());
+   slice       val_slice = slice_create(val.size(), val.c_str());
+   // cout << "insert " << key << endl;
+   transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
+   // cout << "done insert " << key << endl;
+
+   return DB::kOK;
+
+   
+   //return Insert(NULL, table, key, values);
 }
 ///
 /// Deletes a record from the database.

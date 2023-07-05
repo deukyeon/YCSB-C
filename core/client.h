@@ -134,17 +134,19 @@ Client::DoInsert()
 {
    workload_.NextSequenceKey(key);
    workload_.UpdateValues(pairs);
-   int status = -1;
-   if (db_.IsTransactionSupported()) {
-      Transaction *txn = NULL;
-      db_.Begin(&txn);
-      status = db_.Insert(txn, workload_.NextTable(), key, pairs);
-      db_.Commit(&txn);
-   } else {
-      status = db_.Insert(NULL, workload_.NextTable(), key, pairs);
-   }
+   return (db_.Insert(workload_.NextTable(), key, pairs) == DB::kOK);
 
-   return (status == DB::kOK);
+   // int status = -1;
+   // if (db_.IsTransactionSupported()) {
+   //    Transaction *txn = NULL;
+   //    db_.Begin(&txn);
+   //    status = db_.Insert(txn, workload_.NextTable(), key, pairs);
+   //    db_.Commit(&txn);
+   // } else {
+   //    status = db_.Insert(NULL, workload_.NextTable(), key, pairs);
+   // }
+
+   // return (status == DB::kOK);
 }
 
 inline bool
