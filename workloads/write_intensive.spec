@@ -1,4 +1,4 @@
-recordcount=100000000
+recordcount=673000000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 fieldcount=1
 fieldlength=100
@@ -9,6 +9,7 @@ updateproportion=0.5
 scanproportion=0
 insertproportion=0
 readmodifywriteproportion=0
-theta=0.9
-opspertransaction=4
+theta=0.99
+opspertransaction=16
 maxtxncount=1000000
+maxtxnretry=0

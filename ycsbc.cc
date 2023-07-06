@@ -150,8 +150,8 @@ DelegateClient(int                  id,
                uint64_t            *abort_cnt)
 {
    // ! Hoping this atomic shared variable is not bottlenecked.
-   static std::atomic<bool> run_bench;
-   run_bench.store(true);
+   // static std::atomic<bool> run_bench;
+   // run_bench.store(true);
    db->Init();
    ycsbc::Client client(id, *db, *wl);
    uint64_t      oks = 0;
@@ -163,13 +163,14 @@ DelegateClient(int                  id,
       }
    } else {
       if (wl->max_txn_count() > 0) {
-         while (oks < wl->max_txn_count() && run_bench.load()) {
+         // while (oks < wl->max_txn_count() && run_bench.load()) {
+         while (oks < wl->max_txn_count()) {
             oks += client.DoTransaction();
             ProgressUpdate(
                pmode, total_ops, global_op_counter, oks, last_printed);
          }
          ProgressFinish(pmode, total_ops, global_op_counter, oks, last_printed);
-         run_bench.store(false);
+         // run_bench.store(false);
       } else {
          for (uint64_t i = 0; i < num_ops; ++i) {
             oks += client.DoTransaction();
@@ -380,9 +381,9 @@ main(const int argc, const char *argv[])
          }
          actual_ops.clear();
 
-	 ops_per_transactions = stoi(workload.props.GetProperty(
-               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
-               ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
+         ops_per_transactions   = stoi(workload.props.GetProperty(
+            ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
+            ycsbc::CoreWorkload::OPS_PER_TRANSACTION_DEFAULT));
          uint64_t max_txn_count = stoi(workload.props.GetProperty(
             ycsbc::CoreWorkload::MAX_TXN_COUNT_PROPERTY, "0"));
          total_ops =
@@ -432,28 +433,25 @@ main(const int argc, const char *argv[])
             wls[thr_i].DeinitRunWorkload();
          }
 
-         total_ops = total_txn_count; // * ops_per_transactions;
-
-         cout << "# Transaction count:\t" << total_ops << endl;
-         unsigned long sum = 0;
+         const uint64_t total_commit_cnt =
+            std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
+         cout << "# Transaction count:\t" << total_txn_count << endl;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             cout << "[Client " << thr_i << "] txn_cnt: " << txn_cnts[thr_i]
                  << ", abort_cnt: " << abort_cnts[thr_i] << endl;
-            sum += txn_cnts[thr_i];
          }
-         assert(sum == total_txn_count);
 
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
               << num_run_threads << '\t';
-         cout << total_ops / run_duration / 1000 << endl;
+         cout << total_commit_cnt / run_duration / 1000 << endl;
          cout << "Run duration (sec):\t" << run_duration << endl;
 
          const uint64_t total_abort_cnt =
             std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
          cout << "# Abort count:\t" << total_abort_cnt << '\n';
          cout << "Abort rate:\t"
-              << (double)total_abort_cnt / (total_abort_cnt + total_txn_count)
+              << (double)total_abort_cnt / (total_abort_cnt + total_commit_cnt)
               << "\n";
 
          db->PrintDBStats();

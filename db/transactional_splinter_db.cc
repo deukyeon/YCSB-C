@@ -125,7 +125,9 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    // cout << "lookup " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_lookup(spl, txn_handle, key_slice, &lookup_result) != 0)
+   if (transactional_splinterdb_lookup(
+          spl, txn_handle, key_slice, &lookup_result)
+       != 0)
       return DB::kErrorConflict;
    // if (!splinterdb_lookup_found(&lookup_result)) {
    //    cout << "FAILED lookup " << key << endl;
@@ -172,7 +174,8 @@ TransactionalSplinterDB::Update(Transaction    *txn,
    // cout << "update " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice) != 0)
+   if (transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice)
+       != 0)
       return DB::kErrorConflict;
    // cout << "done update " << key << endl;
 
@@ -194,7 +197,8 @@ TransactionalSplinterDB::Insert(Transaction    *txn,
    // cout << "insert " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_insert(spl, txn_handle, key_slice, val_slice) != 0)
+   if (transactional_splinterdb_insert(spl, txn_handle, key_slice, val_slice)
+       != 0)
       return DB::kErrorConflict;
    // cout << "done insert " << key << endl;
 
@@ -298,7 +302,7 @@ TransactionalSplinterDB::Insert(const std::string   &table,
                                 const std::string   &key,
                                 std::vector<KVPair> &values)
 {
-  
+
    assert(values.size() == 1);
 
    std::string val       = values[0].second;
@@ -310,8 +314,8 @@ TransactionalSplinterDB::Insert(const std::string   &table,
 
    return DB::kOK;
 
-   
-   //return Insert(NULL, table, key, values);
+
+   // return Insert(NULL, table, key, values);
 }
 ///
 /// Deletes a record from the database.
@@ -340,7 +344,9 @@ TransactionalSplinterDB::Store(void    *key,
 
    Transaction *txn = NULL;
    Begin(&txn);
-   if (transactional_splinterdb_insert(spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice) != 0)
+   if (transactional_splinterdb_insert(
+          spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice)
+       != 0)
       return DB::kErrorConflict;
    assert(Commit(&txn) == DB::kOK);
 
@@ -377,16 +383,18 @@ TransactionalSplinterDB::Read(Transaction *txn,
    // cout << "lookup " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_lookup(spl, txn_handle, key_slice, &lookup_result) != 0)
+   if (transactional_splinterdb_lookup(
+          spl, txn_handle, key_slice, &lookup_result)
+       != 0)
       return DB::kErrorConflict;
 
-   //assert(!transactional_splinterdb_lookup(
-   //   spl, txn_handle, key_slice, &lookup_result));
-   // if (!splinterdb_lookup_found(&lookup_result)) {
-   //    cout << "FAILED lookup " << key << endl;
-   //    assert(0);
-   // }
-   // cout << "done lookup " << key << endl;
+   // assert(!transactional_splinterdb_lookup(
+   //    spl, txn_handle, key_slice, &lookup_result));
+   //  if (!splinterdb_lookup_found(&lookup_result)) {
+   //     cout << "FAILED lookup " << key << endl;
+   //     assert(0);
+   //  }
+   //  cout << "done lookup " << key << endl;
 
    // TODO: transactional_splinterdb_lookup_result_deinit();
    splinterdb_lookup_result_deinit(&lookup_result);
@@ -407,8 +415,9 @@ TransactionalSplinterDB::Update(Transaction *txn,
    // cout << "update " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice) != 0)
-         return DB::kErrorConflict;
+   if (transactional_splinterdb_update(spl, txn_handle, key_slice, val_slice)
+       != 0)
+      return DB::kErrorConflict;
    // cout << "done update " << key << endl;
 
    return DB::kOK;
@@ -428,7 +437,8 @@ TransactionalSplinterDB::Insert(Transaction *txn,
    // cout << "insert " << key << endl;
 
    transaction *txn_handle = &((SplinterDBTransaction *)txn)->handle;
-   if (transactional_splinterdb_insert(spl, txn_handle, key_slice, val_slice) != 0)
+   if (transactional_splinterdb_insert(spl, txn_handle, key_slice, val_slice)
+       != 0)
       return DB::kErrorConflict;
    // cout << "done insert " << key << endl;
 

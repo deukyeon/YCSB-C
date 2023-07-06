@@ -28,15 +28,12 @@ system_branch_map = {
 
 system_sed_map = {
     'baseline-parallel': ["sed -i 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g' src/transaction_private.h"],
-    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
-    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h"],
+    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h"],
     'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
-    'tictoc-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h",
-                             "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*1/#define EXPERIMENTAL_MODE_SKETCH 0/g' src/experimental_mode.h"],
+                      "sed -i 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g' src/experimental_mode.h"],
+    'tictoc-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h"],
+    'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
 }
 
 def printHelp():

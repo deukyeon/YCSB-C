@@ -152,9 +152,9 @@ Client::DoInsert()
 inline bool
 Client::DoTransaction()
 {
-  //   if (db_.IsTransactionSupported()) {
-      return DoTransactionalOperations();
-      //   }
+   //   if (db_.IsTransactionSupported()) {
+   return DoTransactionalOperations();
+   //   }
 
    return DoOperation();
 }
@@ -237,7 +237,7 @@ Client::DoTransactionalOperations()
    bool is_abort = false;
    int  retry    = 0;
    do {
-      is_abort = false;
+      is_abort            = false;
       int          status = -1;
       Transaction *txn    = NULL;
       db_.Begin(&txn);
@@ -286,7 +286,7 @@ Client::DoTransactionalOperations()
 
    txn_cnt += !is_abort;
 
-   return !is_abort;
+   return true;
 }
 
 inline int
@@ -312,7 +312,8 @@ Client::TransactionReadModifyWrite(Transaction *txn, ClientOperation &client_op)
       ret = db_.Read(txn, client_op.table, client_op.key, NULL, pairs);
    }
 
-   if (ret != 0) return ret;
+   if (ret != 0)
+      return ret;
 
    return db_.Insert(txn, client_op.table, client_op.key, client_op.values);
 }
