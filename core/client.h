@@ -237,6 +237,7 @@ Client::DoTransactionalOperations()
    bool is_abort = false;
    int  retry    = 0;
    do {
+      is_abort = false;
       int          status = -1;
       Transaction *txn    = NULL;
       db_.Begin(&txn);
