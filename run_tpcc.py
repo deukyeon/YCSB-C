@@ -11,7 +11,9 @@ available_systems = [
     'silo-memory',
     'tictoc-memory',
     'tictoc-singlecounter',
-    'tictoc-sketch'
+    'tictoc-sketch',
+    'sto-sketch',
+    'sto-singlecounter'
 ]
 
 system_branch_map = {
@@ -23,7 +25,9 @@ system_branch_map = {
     'silo-memory': 'deukyeon/fantastiCC-refactor',
     'tictoc-memory': 'deukyeon/fantastiCC-refactor',
     'tictoc-singlecounter': 'deukyeon/fantastiCC-refactor',
-    'tictoc-sketch': 'deukyeon/fantastiCC-refactor'
+    'tictoc-sketch': 'deukyeon/fantastiCC-refactor',
+    'sto-sketch': 'deukyeon/fantastiCC-refactor',
+    'sto-singlecounter': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
@@ -34,6 +38,8 @@ system_sed_map = {
                       "sed -i 's/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS [ ]*0/#define EXPERIMENTAL_MODE_KEEP_ALL_KEYS 1/g' src/experimental_mode.h"],
     'tictoc-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h"],
     'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
+    'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h"],
+    'sto-singlecounter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h"]
 }
 
 def printHelp():

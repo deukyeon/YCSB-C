@@ -342,15 +342,8 @@ TransactionalSplinterDB::Store(void    *key,
    slice val_slice = slice_create(value_size, value);
    // printf("Store key (%lu, %lu)\n", *(uint64_t*)key, *((uint64_t*)key+1));
 
-   Transaction *txn = NULL;
-   Begin(&txn);
-   if (transactional_splinterdb_insert(
-          spl, &((SplinterDBTransaction *)txn)->handle, key_slice, val_slice)
-       != 0)
-      return DB::kErrorConflict;
-   assert(Commit(&txn) == DB::kOK);
+   transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
 
-   // assert(!splinterdb_insert(spl, key_slice, val_slice));
    return DB::kOK;
 }
 
