@@ -556,26 +556,34 @@ TPCCWorkload::run_payment(TPCCTransaction *txn)
    // increase the YTD amount of the home warehouse
    key = wKey(txn->w_id);
    if (g_use_upserts) {
-      if (_db->Update(t, &key, sizeof(TPCCKey), &txn->h_amount, sizeof(txn->h_amount)) == ycsbc::DB::kErrorConflict)
+      if (_db->Update(
+             t, &key, sizeof(TPCCKey), &txn->h_amount, sizeof(txn->h_amount))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    } else {
-      if (_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
       w_r.w_ytd += txn->h_amount;
-      if (_db->Insert(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Insert(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    }
 
    // increase the YTD amount of the district of the home warehouse
    key = dKey(txn->d_id, txn->w_id);
    if (g_use_upserts) {
-      if (_db->Update(t, &key, sizeof(TPCCKey), &txn->h_amount, sizeof(txn->h_amount)) == ycsbc::DB::kErrorConflict)
+      if (_db->Update(
+             t, &key, sizeof(TPCCKey), &txn->h_amount, sizeof(txn->h_amount))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    } else {
-      if (_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
       d_r.d_ytd += txn->h_amount;
-      if (_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    }
 
@@ -590,10 +598,12 @@ TPCCWorkload::run_payment(TPCCTransaction *txn)
       cfl.log[0].d_id       = txn->d_id;
       cfl.log[0].d_w_id     = txn->d_w_id;
       cfl.log[0].h_amount   = txn->h_amount;
-      if (_db->Update(t, &key, sizeof(TPCCKey), &cfl, sizeof(cfl)) == ycsbc::DB::kErrorConflict)
+      if (_db->Update(t, &key, sizeof(TPCCKey), &cfl, sizeof(cfl))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    } else {
-      if (_db->Read(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Read(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
       c_r.c_balance -= txn->h_amount;
       c_r.c_ytd_payment += txn->h_amount;
@@ -613,7 +623,8 @@ TPCCWorkload::run_payment(TPCCTransaction *txn)
          memcpy(c_r.c_data, c_new_data, 500);
       }
 
-      if (_db->Insert(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Insert(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    }
 
@@ -630,7 +641,8 @@ TPCCWorkload::run_payment(TPCCTransaction *txn)
    memcpy(h_r.h_data, w_r.w_name, 10);
    memcpy(h_r.h_data + 10, "    ", 4);
    memcpy(h_r.h_data + 14, d_r.d_name, 10);
-   if (_db->Insert(t, &key, sizeof(TPCCKey), &h_r, sizeof(h_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Insert(t, &key, sizeof(TPCCKey), &h_r, sizeof(h_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    return _db->Commit(&t);
@@ -662,21 +674,25 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
 
    // get warehouse info
    key = wKey(txn->w_id);
-   if (_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Read(t, &key, sizeof(TPCCKey), &w_r, sizeof(w_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    // get district info and bump the next order id
    key = dKey(txn->d_id, txn->w_id);
-   if (_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Read(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
    order_id        = d_r.d_next_o_id + 1;
    d_r.d_next_o_id = order_id;
-   if (_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Insert(t, &key, sizeof(TPCCKey), &d_r, sizeof(d_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    // get customer info
    key = cKey(txn->c_id, txn->c_d_id, txn->c_w_id);
-   if (_db->Read(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Read(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    // insert into NEW_ORDER
@@ -684,7 +700,8 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
    no_r.no_w_id = txn->w_id;
    no_r.no_d_id = txn->d_id;
    no_r.no_o_id = order_id;
-   if (_db->Insert(t, &key, sizeof(TPCCKey), &no_r, sizeof(no_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Insert(t, &key, sizeof(TPCCKey), &no_r, sizeof(no_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    // insert into ORDER
@@ -696,7 +713,8 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
    o_r.o_entry_d   = txn->o_entry_d;
    o_r.o_ol_cnt    = txn->ol_cnt;
    o_r.o_all_local = (txn->remote ? 0 : 1);
-   if (_db->Insert(t, &key, sizeof(TPCCKey), &o_r, sizeof(o_r)) == ycsbc::DB::kErrorConflict)
+   if (_db->Insert(t, &key, sizeof(TPCCKey), &o_r, sizeof(o_r))
+       == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
 
    // insert into ORDER_LINE and STOCK
@@ -711,7 +729,8 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
 
       // get item info
       key = iKey(ol_r.ol_i_id);
-      if (_db->Read(t, &key, sizeof(TPCCKey), &i_r, sizeof(i_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Read(t, &key, sizeof(TPCCKey), &i_r, sizeof(i_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
 
       // get and update stock info
@@ -721,10 +740,12 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
          su.ol_quantity = ol_r.ol_quantity;
          su.order_cnt   = 1;
          su.remote_cnt  = ol_r.ol_supply_w_id != txn->w_id ? 1 : 0;
-         if (_db->Update(t, &key, sizeof(TPCCKey), &su, sizeof(su)) == ycsbc::DB::kErrorConflict)
+         if (_db->Update(t, &key, sizeof(TPCCKey), &su, sizeof(su))
+             == ycsbc::DB::kErrorConflict)
             return ycsbc::DB::kErrorConflict;
       } else {
-         if (_db->Read(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r)) == ycsbc::DB::kErrorConflict)
+         if (_db->Read(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r))
+             == ycsbc::DB::kErrorConflict)
             return ycsbc::DB::kErrorConflict;
          if (s_r.s_quantity >= ol_r.ol_quantity + 10) {
             s_r.s_quantity = s_r.s_quantity - ol_r.ol_quantity;
@@ -736,7 +757,8 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
          if (ol_r.ol_supply_w_id != txn->w_id) {
             s_r.s_remote_cnt += 1;
          }
-         if (_db->Insert(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r)) == ycsbc::DB::kErrorConflict)
+         if (_db->Insert(t, &key, sizeof(TPCCKey), &s_r, sizeof(s_r))
+             == ycsbc::DB::kErrorConflict)
             return ycsbc::DB::kErrorConflict;
       }
 
@@ -750,7 +772,8 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
       //         brand_generic[ol_number] = 'G'
 
       key = olKey(txn->w_id, txn->d_id, order_id, ol_number);
-      if (_db->Insert(t, &key, sizeof(TPCCKey), &ol_r, sizeof(ol_r)) == ycsbc::DB::kErrorConflict)
+      if (_db->Insert(t, &key, sizeof(TPCCKey), &ol_r, sizeof(ol_r))
+          == ycsbc::DB::kErrorConflict)
          return ycsbc::DB::kErrorConflict;
    }
 

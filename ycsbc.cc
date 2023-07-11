@@ -194,26 +194,37 @@ DelegateClient(int                  id,
    return oks;
 }
 
+struct tpcc_stats {
+   uint64_t txn_cnt;
+   uint64_t abort_cnt;
+   uint64_t abort_cnt_payment;
+   uint64_t abort_cnt_new_order;
+   uint64_t attempts_payment;
+   uint64_t attempts_new_order;
+};
+
 int
 DelegateTPCCClient(uint32_t            thread_id,
                    ycsbc::DB          *db,
                    tpcc::TPCCWorkload *wl,
-                   uint64_t           *txn_cnt,
-                   uint64_t           *abort_cnt)
+                   tpcc_stats         *stats)
 {
    db->Init();
 
    tpcc::TPCCClient client(thread_id, wl);
    client.run_transactions();
 
-   if (txn_cnt) {
-      *txn_cnt = client.GetTxnCnt();
+   if (stats) {
+      stats->txn_cnt             = client.GetTxnCnt();
+      stats->abort_cnt           = client.GetAbortCnt();
+      stats->abort_cnt_payment   = client.GetAbortCntPayment();
+      stats->abort_cnt_new_order = client.GetAbortCntNewOrder();
+      stats->attempts_payment    = client.GetAttemptsPayment();
+      stats->attempts_new_order  = client.GetAttemptsNewOrder();
    }
 
-   if (abort_cnt) {
-      *abort_cnt = client.GetAbortCnt();
-   }
    db->Close();
+
 
    return 0;
 }
@@ -251,8 +262,7 @@ main(const int argc, const char *argv[])
       tpcc_wl.init((ycsbc::TransactionalSplinterDB *)db,
                    num_threads); // loads TPCC tables into DB
 
-      std::vector<uint64_t> txn_cnts(num_threads, 0);
-      std::vector<uint64_t> abort_cnts(num_threads, 0);
+      std::vector<tpcc_stats> _tpcc_stats(num_threads);
 
       timer.Start();
       {
@@ -262,8 +272,7 @@ main(const int argc, const char *argv[])
                                           i,
                                           db,
                                           &tpcc_wl,
-                                          &txn_cnts[i],
-                                          &abort_cnts[i]));
+                                          &_tpcc_stats[i]));
          }
          assert(actual_ops.size() == num_threads);
          for (auto &n : actual_ops) {
@@ -279,14 +288,22 @@ main(const int argc, const char *argv[])
 
       tpcc_wl.deinit();
 
-      uint64_t total_committed_cnt = 0;
-      uint64_t total_aborted_cnt   = 0;
+      uint64_t total_committed_cnt         = 0;
+      uint64_t total_aborted_cnt           = 0;
+      uint64_t total_aborted_cnt_payment   = 0;
+      uint64_t total_aborted_cnt_new_order = 0;
+      uint64_t total_attempts_payment      = 0;
+      uint64_t total_attempts_new_order    = 0;
 
       for (unsigned int i = 0; i < num_threads; ++i) {
-         cout << "[Client " << i << "] txn_cnt: " << txn_cnts[i]
-              << ", abort_cnt: " << abort_cnts[i] << endl;
-         total_committed_cnt += txn_cnts[i];
-         total_aborted_cnt += abort_cnts[i];
+         cout << "[Client " << i << "] txn_cnt: " << _tpcc_stats[i].txn_cnt
+              << ", abort_cnt: " << _tpcc_stats[i].abort_cnt << endl;
+         total_committed_cnt += _tpcc_stats[i].txn_cnt;
+         total_aborted_cnt += _tpcc_stats[i].abort_cnt;
+         total_aborted_cnt_payment += _tpcc_stats[i].abort_cnt_payment;
+         total_aborted_cnt_new_order += _tpcc_stats[i].abort_cnt_new_order;
+         total_attempts_payment += _tpcc_stats[i].attempts_payment;
+         total_attempts_new_order += _tpcc_stats[i].attempts_new_order;
       }
 
       cout << "# Transaction goodput (KTPS)" << endl;
@@ -300,6 +317,18 @@ main(const int argc, const char *argv[])
            << (double)total_aborted_cnt
                  / (total_aborted_cnt + total_committed_cnt)
            << "\n";
+
+      cout << "# (Payment) Abort rate(%):\t"
+           << total_aborted_cnt_payment * 100.0 / total_aborted_cnt << '\n';
+      cout << "# (NewOrder) Abort rate(%):\t"
+           << total_aborted_cnt_new_order * 100.0 / total_aborted_cnt << '\n';
+
+      cout << "# (Payment) Failure rate(%):\t"
+           << total_aborted_cnt_payment * 100.0 / total_attempts_payment
+           << '\n';
+      cout << "# (NewOrder) Failure rate(%):\t"
+           << total_aborted_cnt_new_order * 100.0 / total_attempts_new_order
+           << '\n';
 
       db->PrintDBStats();
    } else {
