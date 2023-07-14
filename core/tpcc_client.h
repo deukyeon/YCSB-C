@@ -104,23 +104,21 @@ TPCCClient::run_transactions()
 
       tpcc::tpcc_txn_type current_txn_type = txn.type;
 
-      switch (current_txn_type) {
-         case TPCC_PAYMENT:
-            ++attempts_payment;
-            break;
-         case TPCC_NEW_ORDER:
-            ++attempts_new_order;
-            break;
-         default:
-            assert(false);
-      }
-
       bool     need_retry = false;
       uint32_t retry      = 0;
       do {
-         if ((need_retry =
-                 _wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict)) {
-
+         switch (current_txn_type) {
+            case TPCC_PAYMENT:
+               ++attempts_payment;
+               break;
+            case TPCC_NEW_ORDER:
+               ++attempts_new_order;
+               break;
+            default:
+               assert(false);
+         }
+         need_retry = (_wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict);
+         if (need_retry) {
             switch (current_txn_type) {
                case TPCC_PAYMENT:
                   ++abort_cnt_payment;
@@ -133,8 +131,11 @@ TPCCClient::run_transactions()
             }
             ++abort_cnt;
 
-            const int sleep_for = std::pow(2.0, retry * g_abort_penalty_us);
-            std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+            const int sleep_for = std::pow(2.0, retry) * g_abort_penalty_us;
+            if (sleep_for > 0) {
+               std::this_thread::sleep_for(
+                  std::chrono::microseconds(sleep_for));
+            }
             ++retry;
          } else {
             ++txn_cnt;

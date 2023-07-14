@@ -330,6 +330,10 @@ main(const int argc, const char *argv[])
            << total_aborted_cnt_new_order * 100.0 / total_attempts_new_order
            << '\n';
 
+      cout << "# (Payment) Total attempts:\t" << total_attempts_payment << '\n';
+      cout << "# (NewOrder) Total attempts:\t" << total_attempts_new_order
+           << '\n';
+
       db->PrintDBStats();
    } else {
       db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);

@@ -1,8 +1,8 @@
 #ifndef _TPCC_CONFIG_H_
 #define _TPCC_CONFIG_H_
 
-#define ABORT_PENALTY_US 100
-#define MAX_TXN_RETRY    0
+#define ABORT_PENALTY_US 1000
+#define MAX_TXN_RETRY    10
 
 // # of transactions to run for warmup
 #define PERC_PAYMENT            0.5
@@ -16,6 +16,6 @@
 #define MAX_CUST_PER_DIST       3000
 #define WH_UPDATE               true
 #define NUM_WH                  32
-#define TOTAL_NUM_TRANSACTIONS  1000000
+#define TOTAL_NUM_TRANSACTIONS  10000
 
 #endif // _TPCC_CONFIG_H

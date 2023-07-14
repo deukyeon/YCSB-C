@@ -104,7 +104,7 @@ const string CoreWorkload::MIN_TXN_ABORT_PANELTY_US_PROPERTY =
 const string CoreWorkload::MIN_TXN_ABORT_PANELTY_US_DEFAULT = "1000";
 
 const string CoreWorkload::MAX_TXN_RETRY_PROPERTY = "maxtxnretry";
-const string CoreWorkload::MAX_TXN_RETRY_DEFAULT  = "0";
+const string CoreWorkload::MAX_TXN_RETRY_DEFAULT  = "10";
 
 const std::string CoreWorkload::MAX_TXN_COUNT_PROPERTY = "maxtxncount";
 const std::string CoreWorkload::MAX_TXN_COUNT_DEFAULT  = "0";
