@@ -172,7 +172,7 @@ def main(argc, argv):
         cpulist.append(i)
         cpulist.append(i + 16)
 
-    splinterdb_opts = '-p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 32000'
+    splinterdb_opts = '-p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 128'
 
     cmds = []
     # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
