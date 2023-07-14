@@ -47,19 +47,8 @@ system_sed_map = {
 }
 
 available_workloads = [
-    'high_contention',
-    'medium_contention',
-    'write_intensive',
     'write_intensive_10M',
-    'write_intensive_100M',
-    'write_intensive_10M_16ops',
     'write_intensive_10M_uniform',
-    'rmw_intensive',
-    'rmw_intensive_10M',
-    'rmw_intensive_10M_16ops',
-    'rmw_intensive_10M_uniform',
-    'read_intensive',
-    'read_intensive_10M'
 ]
 
 
@@ -193,7 +182,7 @@ def main(argc, argv):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
     # for thread in [32]:
         cpulist_str = ",".join(map(str, cpulist[:thread]))
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1'
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 128'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):
