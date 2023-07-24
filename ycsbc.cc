@@ -409,8 +409,16 @@ main(const int argc, const char *argv[])
       for (const auto &workload : run_workloads) {
          unsigned int num_run_threads = stoi(
             workload.props.GetProperty("threads", std::to_string(num_threads)));
+         std::vector<std::thread> init_threads;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
-            wls[thr_i].InitRunWorkload(workload.props, num_run_threads, thr_i);
+            init_threads.emplace_back(std::thread(
+               [&wls = wls, &workload = workload, num_run_threads, thr_i]() {
+                  wls[thr_i].InitRunWorkload(
+                     workload.props, num_run_threads, thr_i);
+               }));
+         }
+         for (auto &t : init_threads) {
+            t.join();
          }
          actual_ops.clear();
 
