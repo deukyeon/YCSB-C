@@ -187,7 +187,7 @@ def main(argc, argv):
         cmds.append(cmd)
 
     # run load phase
-    run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads 32 -L {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096', shell=True)
+    run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096', shell=True)
 
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
