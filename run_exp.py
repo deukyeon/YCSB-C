@@ -103,18 +103,18 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
     abort_counts = []
     abort_rates = []
 
-    load_data = False
+    # load_data = False
     run_data = False
 
     for line in lines:
-        if load_data:
-            fields = line.split()
-            load_threads.append(fields[-2])
-            load_tputs.append(fields[-1])
-            load_data = False
+        # if load_data:
+        #     fields = line.split()
+        #     load_threads.append(fields[-2])
+        #     load_tputs.append(fields[-1])
+        #     load_data = False
 
-        if line.startswith("# Load throughput (KTPS)"):
-            load_data = True
+        # if line.startswith("# Load throughput (KTPS)"):
+        #     load_data = True
 
         if run_data:
             fields = line.split()
@@ -134,7 +134,8 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             abort_rates.append(fields[-1])
 
     # print csv
-    for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
+    # for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, strict=True):
         print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
 
 
@@ -157,7 +158,7 @@ def main(argc, argv):
     label = system + '-' + conf
     csv_path = f'{label}.csv'
     csv = open(csv_path, 'w')
-    print("system,conf,threads,load,goodput,aborts,abort_rate,seq", file=csv)
+    print("system,conf,threads,goodput,aborts,abort_rate,seq", file=csv)
     num_repeats = 2
     if parse_result_only:
         for i in range(0, num_repeats):
