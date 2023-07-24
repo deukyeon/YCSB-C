@@ -47,8 +47,8 @@ system_sed_map = {
 }
 
 available_workloads = [
-    'write_intensive_10M',
-    'write_intensive_10M_uniform',
+    'write_intensive',
+    'write_intensive_large_value',
 ]
 
 
@@ -158,7 +158,7 @@ def main(argc, argv):
     csv_path = f'{label}.csv'
     csv = open(csv_path, 'w')
     print("system,conf,threads,load,goodput,aborts,abort_rate,seq", file=csv)
-    num_repeats = 1
+    num_repeats = 3
     if parse_result_only:
         for i in range(0, num_repeats):
             log_path = f'/tmp/{label}.{i}.log'
@@ -182,7 +182,7 @@ def main(argc, argv):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
     # for thread in [32]:
         cpulist_str = ",".join(map(str, cpulist[:thread]))
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 640'
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -L {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):

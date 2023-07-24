@@ -277,7 +277,9 @@ Client::DoTransactionalOperations()
          ++abort_cnt;
          const int sleep_for =
             std::pow(2.0, retry) * workload_.min_txn_abort_panelty_us();
-         std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+         if (sleep_for > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
+         }
          ++retry;
       }
    } while (is_abort && retry <= workload_.max_txn_retry());

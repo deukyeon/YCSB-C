@@ -1,7 +1,7 @@
-recordcount=673000000
+recordcount=84000000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 fieldcount=1
-fieldlength=100
+fieldlength=1024
 readallfields=true
 requestdistribution=zipfian
 readproportion=0.5
