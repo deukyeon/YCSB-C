@@ -186,9 +186,6 @@ def main(argc, argv):
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {cpulist_str} ./ycsbc -db {db} -threads {thread} -P {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096'
         cmds.append(cmd)
 
-    # run load phase
-    run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096', shell=True)
-
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
         if os.path.isfile(log_path):
@@ -202,6 +199,10 @@ def main(argc, argv):
             logfile.write(f'{cmd}\n')
             run_shell_command(
                 'echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null')
+
+            # run load phase
+            run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096', shell=True)
+
             out, _ = run_shell_command(cmd, shell=True)
             if out:
                 logfile.write(out.decode())
