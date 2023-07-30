@@ -71,6 +71,10 @@ TransactionalSplinterDB::TransactionalSplinterDB(
    splinterdb_cfg.use_stats = props.GetIntProperty("splinterdb.use_stats");
    splinterdb_cfg.reclaim_threshold =
       props.GetIntProperty("splinterdb.reclaim_threshold");
+   splinterdb_cfg.num_memtable_bg_threads =
+      props.GetIntProperty("splinterdb.num_memtable_bg_threads");
+   splinterdb_cfg.num_normal_bg_threads =
+      props.GetIntProperty("splinterdb.num_normal_bg_threads");
 
    if (preloaded) {
       assert(!transactional_splinterdb_open(&splinterdb_cfg, &spl));

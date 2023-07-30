@@ -65,6 +65,10 @@ std::map<string, string> default_props = {
    {"splinterdb.max_branches_per_node", "0"},
    {"splinterdb.use_stats", "0"},
    {"splinterdb.reclaim_threshold", "0"},
+   {"splinterdb.num_memtable_bg_threads", "0"},
+   {"splinterdb.num_normal_bg_threads", "0"},
+
+   // Transaction isolation level isn't used for now
    {"splinterdb.isolation_level", "1"},
 
    {"rocksdb.database_filename", "rocksdb.db"},
