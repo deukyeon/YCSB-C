@@ -167,17 +167,12 @@ def main(argc, argv):
 
     max_num_threads = min(os.cpu_count(), 32)
 
-    cpulist = []
-    for i in range(max_num_threads // 2):
-        cpulist.append(i)
-        cpulist.append(i + 16)
-
     splinterdb_opts = '-p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 128'
 
     cmds = []
     # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so numactl -C {",".join(map(str, cpulist[:thread]))} ./ycsbc -db {db} -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):
