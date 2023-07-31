@@ -242,6 +242,7 @@ bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
       thr_i % 2 == 0 ? thr_i / 2
                            : (thr_i / 2) + numautils::num_lcores_per_numa_node() / 2;
    size_t bound_core_num = numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
+   (void)bound_core_num;
    // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num << std::endl;
 }
 
