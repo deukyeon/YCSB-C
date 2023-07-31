@@ -10,6 +10,7 @@
 #include "core/core_workload.h"
 #include "core/timer.h"
 #include "core/utils.h"
+#include "core/numautils.h"
 #include "db/db_factory.h"
 #include "core/tpcc_workload.h"
 #include <cstring>
@@ -140,7 +141,7 @@ ProgressFinish(progress_mode      pmode,
       pmode, total_ops, global_op_counter, i % sync_interval, last_printed);
 }
 
-int
+void
 DelegateClient(int                  id,
                ycsbc::DB           *db,
                ycsbc::CoreWorkload *wl,
@@ -150,34 +151,35 @@ DelegateClient(int                  id,
                uint64_t             total_ops,
                volatile uint64_t   *global_op_counter,
                volatile uint64_t   *last_printed,
-               uint64_t            *txn_cnt,
-               uint64_t            *abort_cnt)
+               uint64_t            *commit_cnt,
+               uint64_t            *abort_cnt,
+               uint64_t            *txn_cnt)
 {
-   // ! Hoping this atomic shared variable is not bottlenecked.
+   // Hoping this atomic shared variable is not bottlenecked.
    // static std::atomic<bool> run_bench;
    // run_bench.store(true);
    db->Init();
    ycsbc::Client client(id, *db, *wl);
-   uint64_t      oks = 0;
 
    if (is_loading) {
       for (uint64_t i = 0; i < num_ops; ++i) {
-         oks += client.DoInsert();
+         *txn_cnt += client.DoInsert();
          ProgressUpdate(pmode, total_ops, global_op_counter, i, last_printed);
       }
    } else {
       if (wl->max_txn_count() > 0) {
-         // while (oks < wl->max_txn_count() && run_bench.load()) {
-         while (oks < wl->max_txn_count()) {
-            oks += client.DoTransaction();
+         // while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
+         while (*txn_cnt < wl->max_txn_count()) {
+            *txn_cnt += client.DoTransaction();
             ProgressUpdate(
-               pmode, total_ops, global_op_counter, oks, last_printed);
+               pmode, total_ops, global_op_counter, *txn_cnt, last_printed);
          }
-         ProgressFinish(pmode, total_ops, global_op_counter, oks, last_printed);
+         ProgressFinish(
+            pmode, total_ops, global_op_counter, *txn_cnt, last_printed);
          // run_bench.store(false);
       } else {
          for (uint64_t i = 0; i < num_ops; ++i) {
-            oks += client.DoTransaction();
+            *txn_cnt += client.DoTransaction();
             ProgressUpdate(
                pmode, total_ops, global_op_counter, i, last_printed);
          }
@@ -187,15 +189,13 @@ DelegateClient(int                  id,
    }
    db->Close();
 
-   if (txn_cnt) {
-      *txn_cnt = client.GetTxnCnt();
+   if (commit_cnt) {
+      *commit_cnt = client.GetTxnCnt();
    }
 
    if (abort_cnt) {
       *abort_cnt = client.GetAbortCnt();
    }
-
-   return oks;
 }
 
 struct tpcc_stats {
@@ -233,6 +233,17 @@ DelegateTPCCClient(uint32_t            thread_id,
    return 0;
 }
 
+void
+bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
+{
+   // !This should be modified depending on machine
+   const size_t numa_node = 0;
+   size_t       numa_local_index =
+      thr_i % 2 == 0 ? thr_i / 2
+                           : (thr_i / 2) + numautils::num_lcores_per_numa_node() / 2;
+   size_t bound_core_num = numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
+   // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num << std::endl;
+}
 
 int
 main(const int argc, const char *argv[])
@@ -266,30 +277,23 @@ main(const int argc, const char *argv[])
       tpcc_wl.init((ycsbc::TransactionalSplinterDB *)db,
                    num_threads); // loads TPCC tables into DB
 
-      std::vector<tpcc_stats> _tpcc_stats(num_threads);
-
+      std::vector<tpcc_stats>  _tpcc_stats(num_threads);
+      std::vector<std::thread> tpcc_threads;
       timer.Start();
       {
          for (unsigned int i = 0; i < num_threads; ++i) {
-            actual_ops.emplace_back(async(launch::async,
-                                          DelegateTPCCClient,
-                                          i,
-                                          db,
-                                          &tpcc_wl,
-                                          &_tpcc_stats[i]));
+            tpcc_threads.emplace_back(std::thread(
+               DelegateTPCCClient, i, db, &tpcc_wl, &_tpcc_stats[i]));
+            bind_to_cpu(tpcc_threads, i);
          }
-         assert(actual_ops.size() == num_threads);
-         for (auto &n : actual_ops) {
-            assert(n.valid());
-            n.get();
-         }
-         if (pmode != no_progress) {
-            cout << "\n";
+         for (auto &t : tpcc_threads) {
+            t.join();
          }
       }
-
       double run_duration = timer.End();
-
+      if (pmode != no_progress) {
+         cout << "\n";
+      }
       tpcc_wl.deinit();
 
       uint64_t total_committed_cnt         = 0;
@@ -366,6 +370,9 @@ main(const int argc, const char *argv[])
 
       // Perform the Load phase
       if (!load_workload.preloaded) {
+         std::vector<std::thread> load_threads;
+         std::vector<uint64_t>    txn_cnts(num_threads, 0);
+
          timer.Start();
          {
             cout << "# Loading records:\t" << record_count << endl;
@@ -374,31 +381,30 @@ main(const int argc, const char *argv[])
             for (thr_i = 0; thr_i < num_threads; ++thr_i) {
                uint64_t start_op = (record_count * thr_i) / num_threads;
                uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
-               actual_ops.emplace_back(async(launch::async,
-                                             DelegateClient,
-                                             thr_i,
-                                             db,
-                                             &wls[thr_i],
-                                             end_op - start_op,
-                                             true,
-                                             pmode,
-                                             record_count,
-                                             &load_progress,
-                                             &last_printed,
-                                             nullptr,
-                                             nullptr));
+               load_threads.emplace_back(std::thread(DelegateClient,
+                                                     thr_i,
+                                                     db,
+                                                     &wls[thr_i],
+                                                     end_op - start_op,
+                                                     true,
+                                                     pmode,
+                                                     record_count,
+                                                     &load_progress,
+                                                     &last_printed,
+                                                     nullptr,
+                                                     nullptr,
+                                                     &txn_cnts[thr_i]));
+               bind_to_cpu(load_threads, thr_i);
             }
-            assert(actual_ops.size() == num_threads);
-            total_txn_count = 0;
-            for (auto &n : actual_ops) {
-               assert(n.valid());
-               total_txn_count += n.get();
-            }
-            if (pmode != no_progress) {
-               cout << "\n";
+            for (auto &t : load_threads) {
+               t.join();
             }
          }
          double load_duration = timer.End();
+         if (pmode != no_progress) {
+            cout << "\n";
+         }
+         total_txn_count = std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
          cout << "# Load throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << load_workload.filename << '\t'
               << num_threads << '\t';
@@ -413,18 +419,20 @@ main(const int argc, const char *argv[])
       for (const auto &workload : run_workloads) {
          unsigned int num_run_threads = stoi(
             workload.props.GetProperty("threads", std::to_string(num_threads)));
-         std::vector<std::thread> init_threads;
+         std::vector<std::thread> run_threads;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
-            init_threads.emplace_back(std::thread(
+            run_threads.emplace_back(std::thread(
                [&wls = wls, &workload = workload, num_run_threads, thr_i]() {
                   wls[thr_i].InitRunWorkload(
                      workload.props, num_run_threads, thr_i);
                }));
+            bind_to_cpu(run_threads, thr_i);
          }
-         for (auto &t : init_threads) {
+         for (auto &t : run_threads) {
             t.join();
          }
-         actual_ops.clear();
+         // actual_ops.clear();
+         run_threads.clear();
 
          ops_per_transactions   = stoi(workload.props.GetProperty(
             ycsbc::CoreWorkload::OPS_PER_TRANSACTION_PROPERTY,
@@ -438,8 +446,9 @@ main(const int argc, const char *argv[])
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
          uint64_t              run_progress = 0;
          uint64_t              last_printed = 0;
-         std::vector<uint64_t> txn_cnts(num_run_threads, 0);
+         std::vector<uint64_t> commit_cnts(num_run_threads, 0);
          std::vector<uint64_t> abort_cnts(num_run_threads, 0);
+         std::vector<uint64_t> txn_cnts(num_run_threads, 0);
 
          timer.Start();
          {
@@ -448,44 +457,44 @@ main(const int argc, const char *argv[])
                uint64_t end_op   = (total_ops * (thr_i + 1)) / num_run_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
-               actual_ops.emplace_back(async(launch::async,
-                                             DelegateClient,
-                                             thr_i,
-                                             db,
-                                             &wls[thr_i],
-                                             num_transactions,
-                                             false,
-                                             pmode,
-                                             total_ops,
-                                             &run_progress,
-                                             &last_printed,
-                                             &txn_cnts[thr_i],
-                                             &abort_cnts[thr_i]));
+               run_threads.emplace_back(std::thread(DelegateClient,
+                                                    thr_i,
+                                                    db,
+                                                    &wls[thr_i],
+                                                    num_transactions,
+                                                    false,
+                                                    pmode,
+                                                    total_ops,
+                                                    &run_progress,
+                                                    &last_printed,
+                                                    &commit_cnts[thr_i],
+                                                    &abort_cnts[thr_i],
+                                                    &txn_cnts[thr_i]));
+               bind_to_cpu(run_threads, thr_i);
             }
-            assert(actual_ops.size() == num_run_threads);
-            total_txn_count = 0;
-            for (auto &n : actual_ops) {
-               assert(n.valid());
-               total_txn_count += n.get();
-            }
-            if (pmode != no_progress) {
-               cout << "\n";
+            for (auto &t : run_threads) {
+               t.join();
             }
          }
          double run_duration = timer.End();
+
+         if (pmode != no_progress) {
+            cout << "\n";
+         }
 
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             wls[thr_i].DeinitRunWorkload();
          }
 
-         const uint64_t total_commit_cnt =
-            std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
+         total_txn_count = std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
          cout << "# Transaction count:\t" << total_txn_count << endl;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
-            cout << "[Client " << thr_i << "] txn_cnt: " << txn_cnts[thr_i]
+            cout << "[Client " << thr_i << "] txn_cnt: " << commit_cnts[thr_i]
                  << ", abort_cnt: " << abort_cnts[thr_i] << endl;
          }
 
+         const uint64_t total_commit_cnt =
+            std::accumulate(commit_cnts.begin(), commit_cnts.end(), 0);
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
               << num_run_threads << '\t';

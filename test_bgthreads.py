@@ -25,7 +25,6 @@ else:
 
 
 ld_preload = 'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-numactl = 'numactl -N 0'
 ycsbc = f'./ycsbc -db transactional_splinterdb \
     -threads {num_threads} \
     -L workloads/write_intensive_test.spec \
@@ -35,7 +34,7 @@ ycsbc = f'./ycsbc -db transactional_splinterdb \
     -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
     -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
 
-cmd = f'{ld_preload} {numactl} {ycsbc}'
+cmd = f'{ld_preload} {ycsbc}'
 
 print(f'Running command: {cmd}')
 print(f'Total # of threads: {num_threads + num_normal_bg_threads + num_memtable_bg_threads}')
