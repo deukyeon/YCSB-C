@@ -18,7 +18,7 @@ for opt, arg in opts:
 
 if bg_threads_enabled:
     num_normal_bg_threads = num_threads
-    num_memtable_bg_threads = (num_threads // 10) + int(num_threads % 10 != 0)
+    num_memtable_bg_threads = (num_threads + 9) // 10
 else:
     num_normal_bg_threads = 0
     num_memtable_bg_threads = 0
