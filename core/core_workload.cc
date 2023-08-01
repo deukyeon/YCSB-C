@@ -159,15 +159,15 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
 {
    generator_.seed(this_thread * 3423452437 + 8349344563457);
 
-   double read_proportion = std::stod(
+   read_proportion_ = std::stod(
       p.GetProperty(READ_PROPORTION_PROPERTY, READ_PROPORTION_DEFAULT));
-   double update_proportion = std::stod(
+   update_proportion_ = std::stod(
       p.GetProperty(UPDATE_PROPORTION_PROPERTY, UPDATE_PROPORTION_DEFAULT));
-   double insert_proportion = std::stod(
+   insert_proportion_ = std::stod(
       p.GetProperty(INSERT_PROPORTION_PROPERTY, INSERT_PROPORTION_DEFAULT));
-   double scan_proportion = std::stod(
+   scan_proportion_ = std::stod(
       p.GetProperty(SCAN_PROPORTION_PROPERTY, SCAN_PROPORTION_DEFAULT));
-   double readmodifywrite_proportion = std::stod(p.GetProperty(
+   readmodifywrite_proportion_ = std::stod(p.GetProperty(
       READMODIFYWRITE_PROPORTION_PROPERTY, READMODIFYWRITE_PROPORTION_DEFAULT));
 
    std::string request_dist = p.GetProperty(REQUEST_DISTRIBUTION_PROPERTY,
@@ -192,20 +192,20 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
    max_txn_count_ =
       std::stoul(p.GetProperty(MAX_TXN_COUNT_PROPERTY, MAX_TXN_COUNT_DEFAULT));
 
-   if (read_proportion > 0) {
-      op_chooser_.AddValue(READ, read_proportion);
+   if (read_proportion_ > 0) {
+      op_chooser_.AddValue(READ, read_proportion_);
    }
-   if (update_proportion > 0) {
-      op_chooser_.AddValue(UPDATE, update_proportion);
+   if (update_proportion_ > 0) {
+      op_chooser_.AddValue(UPDATE, update_proportion_);
    }
-   if (insert_proportion > 0) {
-      op_chooser_.AddValue(INSERT, insert_proportion);
+   if (insert_proportion_ > 0) {
+      op_chooser_.AddValue(INSERT, insert_proportion_);
    }
-   if (scan_proportion > 0) {
-      op_chooser_.AddValue(SCAN, scan_proportion);
+   if (scan_proportion_ > 0) {
+      op_chooser_.AddValue(SCAN, scan_proportion_);
    }
-   if (readmodifywrite_proportion > 0) {
-      op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion);
+   if (readmodifywrite_proportion_ > 0) {
+      op_chooser_.AddValue(READMODIFYWRITE, readmodifywrite_proportion_);
    }
 
    if (request_dist == "uniform") {
@@ -223,7 +223,7 @@ CoreWorkload::InitRunWorkload(const utils::Properties &p,
       } else {
          op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
       }
-      int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
+      int new_keys = (int)(op_count * insert_proportion_ * 2); // a fudge factor
       // key_chooser_ = new ScrambledZipfianGenerator(generator_, record_count_
       // + new_keys);
       uint64_t num_items = record_count_ + new_keys;
@@ -324,6 +324,7 @@ CoreWorkload::UpdateValues(std::vector<ycsbc::DB::KVPair> &values)
 void
 CoreWorkload::BuildUpdate(std::vector<ycsbc::DB::KVPair> &update)
 {
+   update.clear();
    ycsbc::DB::KVPair pair;
    pair.first.append(NextFieldName());
    pair.second.append(field_len_generator_->Next(),

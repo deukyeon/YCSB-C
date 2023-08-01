@@ -7,7 +7,7 @@
 //
 
 #include "core/client.h"
-#include "core/exp_client.h"
+#include "core/txn_client.h"
 #include "core/core_workload.h"
 #include "core/timer.h"
 #include "core/utils.h"
@@ -387,8 +387,8 @@ main(const int argc, const char *argv[])
                uint64_t start_op = (record_count * thr_i) / num_threads;
                uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
                load_threads.emplace_back(
-                  std::thread(props.GetProperty("client") == "exp"
-                                 ? DelegateClient<ycsbc::ExpClient>
+                  std::thread(props.GetProperty("client") == "txn"
+                                 ? DelegateClient<ycsbc::TxnClient>
                                  : DelegateClient<ycsbc::Client>,
                               thr_i,
                               db,
@@ -466,8 +466,8 @@ main(const int argc, const char *argv[])
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
                run_threads.emplace_back(
-                  std::thread(props.GetProperty("client") == "exp"
-                                 ? DelegateClient<ycsbc::ExpClient>
+                  std::thread(props.GetProperty("client") == "txn"
+                                 ? DelegateClient<ycsbc::TxnClient>
                                  : DelegateClient<ycsbc::Client>,
                               thr_i,
                               db,

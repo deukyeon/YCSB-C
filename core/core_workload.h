@@ -238,6 +238,31 @@ public:
    {
       return max_txn_count_;
    }
+   inline double
+   read_proportion() const
+   {
+      return read_proportion_;
+   }
+   inline double
+   update_proportion() const
+   {
+      return update_proportion_;
+   }
+   inline double
+   insert_proportion() const
+   {
+      return insert_proportion_;
+   }
+   inline double
+   scan_proportion() const
+   {
+      return scan_proportion_;
+   }
+   inline double
+   readmodifywrite_proportion() const
+   {
+      return readmodifywrite_proportion_;
+   }
 
    CoreWorkload()
       : generator_(),
@@ -295,6 +320,11 @@ protected:
    int                                 max_txn_retry_;
    unsigned long                       max_txn_count_;
    std::uniform_int_distribution<char> uniform_letter_dist_;
+   double                              read_proportion_;
+   double                              update_proportion_;
+   double                              insert_proportion_;
+   double                              scan_proportion_;
+   double                              readmodifywrite_proportion_;
 };
 
 inline void
