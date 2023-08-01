@@ -56,7 +56,6 @@ system_sed_map = {
 available_workloads = [
     'write_intensive',
     'write_intensive_large_value',
-    'write_intensive_test',
 ]
 
 
@@ -181,11 +180,13 @@ def main(argc, argv):
 
     max_num_threads = min(os.cpu_count(), 32)
 
+    dev_name = '/dev/nvme1n1'
+
     cmds = []
     # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
     # for thread in [32]:
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {thread} -P {spec_file} -W {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096'
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {thread} -P {spec_file} -W {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb 4096'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):
@@ -203,7 +204,7 @@ def main(argc, argv):
                 'echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null')
 
             # run load phase
-            run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 4096', shell=True)
+            run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb 4096', shell=True)
 
             out, _ = run_shell_command(cmd, shell=True)
             if out:
