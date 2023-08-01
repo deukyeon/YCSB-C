@@ -90,6 +90,8 @@ public:
 protected:
    virtual bool
    DoOperation();
+   virtual void
+   GenerateClientTransactionalOperations();
    virtual bool
    DoTransactionalOperations();
 
@@ -196,8 +198,8 @@ Client::DoOperation()
    return true;
 }
 
-inline bool
-Client::DoTransactionalOperations()
+void
+Client::GenerateClientTransactionalOperations()
 {
    int num_ops = workload_.ops_per_transaction();
 
@@ -233,6 +235,12 @@ Client::DoTransactionalOperations()
    //    std::cout << op.op << " " << op.key << std::endl;
    // }
    // std::cout << "---" << std::endl;
+}
+
+inline bool
+Client::DoTransactionalOperations()
+{
+   GenerateClientTransactionalOperations();
 
    bool is_abort = false;
    int  retry    = 0;

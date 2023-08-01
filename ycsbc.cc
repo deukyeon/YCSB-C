@@ -7,6 +7,7 @@
 //
 
 #include "core/client.h"
+#include "core/exp_client.h"
 #include "core/core_workload.h"
 #include "core/timer.h"
 #include "core/utils.h"
@@ -141,6 +142,7 @@ ProgressFinish(progress_mode      pmode,
       pmode, total_ops, global_op_counter, i % sync_interval, last_printed);
 }
 
+template<class Client = ycsbc::Client>
 void
 DelegateClient(int                  id,
                ycsbc::DB           *db,
@@ -159,7 +161,7 @@ DelegateClient(int                  id,
    // static std::atomic<bool> run_bench;
    // run_bench.store(true);
    db->Init();
-   ycsbc::Client client(id, *db, *wl);
+   Client client(id, *db, *wl);
 
    if (is_loading) {
       for (uint64_t i = 0; i < num_ops; ++i) {
@@ -241,9 +243,11 @@ bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
    size_t       numa_local_index =
       thr_i % 2 == 0 ? thr_i / 2
                            : (thr_i / 2) + numautils::num_lcores_per_numa_node() / 2;
-   size_t bound_core_num = numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
+   size_t bound_core_num =
+      numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
    (void)bound_core_num;
-   // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num << std::endl;
+   // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
+   // std::endl;
 }
 
 int
@@ -458,19 +462,23 @@ main(const int argc, const char *argv[])
                uint64_t end_op   = (total_ops * (thr_i + 1)) / num_run_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
-               run_threads.emplace_back(std::thread(DelegateClient,
-                                                    thr_i,
-                                                    db,
-                                                    &wls[thr_i],
-                                                    num_transactions,
-                                                    false,
-                                                    pmode,
-                                                    total_ops,
-                                                    &run_progress,
-                                                    &last_printed,
-                                                    &commit_cnts[thr_i],
-                                                    &abort_cnts[thr_i],
-                                                    &txn_cnts[thr_i]));
+               run_threads.emplace_back(
+                  std::thread(props.GetProperty("client") == "exp"
+                                 ? DelegateClient<ycsbc::ExpClient>
+                                 : DelegateClient<ycsbc::Client>,
+                              thr_i,
+                              db,
+                              &wls[thr_i],
+                              num_transactions,
+                              false,
+                              pmode,
+                              total_ops,
+                              &run_progress,
+                              &last_printed,
+                              &commit_cnts[thr_i],
+                              &abort_cnts[thr_i],
+                              &txn_cnts[thr_i]));
+
                bind_to_cpu(run_threads, thr_i);
             }
             for (auto &t : run_threads) {
@@ -595,6 +603,14 @@ ParseCommandLine(int                         argc,
          argindex++;
       } else if (strcmp(argv[argindex], "-upserts") == 0) {
          tpcc::g_use_upserts = true;
+         argindex++;
+      } else if (strcmp(argv[argindex], "-client") == 0) {
+         argindex++;
+         if (argindex >= argc) {
+            UsageMessage(argv[0]);
+            exit(0);
+         }
+         props.SetProperty("client", argv[argindex]);
          argindex++;
       } else if (strcmp(argv[argindex], "-W") == 0
                  || strcmp(argv[argindex], "-P") == 0
