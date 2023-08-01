@@ -4,9 +4,11 @@ import sys
 import numpy as np
 import getopt
 
+
 def print_usage(retcode=0):
     print(f'Usage: {sys.argv[0]} -t <num_threads>')
     sys.exit(retcode)
+
 
 num_threads = 0
 opts, args = getopt.getopt(sys.argv[1:], 'ht:', ['help', 'threads='])
@@ -19,16 +21,14 @@ for opt, arg in opts:
 if num_threads == 0:
     print_usage(1)
 
-transaction_times = [[]] * num_threads
-execution_times = [[]] * num_threads
-validation_times = [[]] * num_threads
-write_times = [[]] * num_threads
-            
-abort_transaction_times = [[]] * num_threads
-abort_execution_times = [[]] * num_threads
-abort_validation_times = [[]] * num_threads
+transaction_times = [[] for _ in range(num_threads)]
+execution_times = [[] for _ in range(num_threads)]
+validation_times = [[] for _ in range(num_threads)]
+write_times = [[] for _ in range(num_threads)]
 
-commit_data = True
+abort_transaction_times = [[] for _ in range(num_threads)]
+abort_execution_times = [[] for _ in range(num_threads)]
+abort_validation_times = [[] for _ in range(num_threads)]
 
 for i in range(num_threads):
     filename = f'transaction_stats_{i}.txt'
@@ -38,6 +38,7 @@ for i in range(num_threads):
                 commit_data = False
                 continue
             if line.startswith('commit_transaction_times'):
+                commit_data = True
                 continue
 
             fields = line.split()
@@ -58,28 +59,32 @@ for i in range(num_threads):
                 if fields[0] == 'V':
                     abort_validation_times[i].append(int(fields[1]))
 
+
+def print_stats(data):
+    print("thread", "min", "med", "avg", "99", "max")
+    aggregated = []
+    for i in range(num_threads):
+        print(i, int(np.min(data[i])), int(np.median(data[i])),
+              int(np.mean(data[i])), int(np.percentile(data[i], 99)), int(np.max(data[i])))
+        aggregated.extend(data[i])
+    print("all", int(np.min(aggregated)), int(np.median(aggregated)), int(np.mean(aggregated)),
+          int(np.percentile(aggregated, 99)), int(np.max(aggregated)))
+
+
 print("Statistics by threads (commit)")
-print("Transaction times (ns): min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(transaction_times[i]))},{int(np.median(transaction_times[i]))},{int(np.mean(transaction_times[i]))},{int(np.percentile(transaction_times[i], 99))},{int(np.max(transaction_times[i]))}')
-print("Execution times: min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(execution_times[i]))},{int(np.median(execution_times[i]))},{int(np.mean(execution_times[i]))},{int(np.percentile(execution_times[i], 99))},{int(np.max(execution_times[i]))}')
-print("Validation times: min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(validation_times[i]))},{int(np.median(validation_times[i]))},{int(np.mean(validation_times[i]))},{int(np.percentile(validation_times[i], 99))},{int(np.max(validation_times[i]))}')
-print("Write times: min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(write_times[i]))},{int(np.median(write_times[i]))},{int(np.mean(write_times[i]))},{int(np.percentile(write_times[i], 99))},{int(np.max(write_times[i]))}')
+print("Transaction times (ns)")
+print_stats(transaction_times)
+print("Execution times")
+print_stats(execution_times)
+print("Validation times")
+print_stats(validation_times)
+print("Write times")
+print_stats(write_times)
 
 print("Statistics by threads (abort)")
-print("Transaction times (ns): min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(abort_transaction_times[i]))},{int(np.median(abort_transaction_times[i]))},{int(np.mean(abort_transaction_times[i]))},{int(np.percentile(abort_transaction_times[i], 99))},{int(np.max(abort_transaction_times[i]))}')
-print("Execution times: min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(abort_execution_times[i]))},{int(np.median(abort_execution_times[i]))},{int(np.mean(abort_execution_times[i]))},{int(np.percentile(abort_execution_times[i], 99))},{int(np.max(abort_execution_times[i]))}')
-print("Validation times: min,mid,avg,99,max")
-for i in range(num_threads):
-    print(f'{i}: {int(np.min(abort_validation_times[i]))},{int(np.median(abort_validation_times[i]))},{int(np.mean(abort_validation_times[i]))},{int(np.percentile(abort_validation_times[i], 99))},{int(np.max(abort_validation_times[i]))}')
-
+print("Transaction times (ns)")
+print_stats(abort_transaction_times)
+print("Execution times")
+print_stats(abort_execution_times)
+print("Validation times")
+print_stats(abort_validation_times)
