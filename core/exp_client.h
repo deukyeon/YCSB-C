@@ -23,10 +23,10 @@ protected:
          operations_in_transaction.emplace(client_op);
       }
 
-    //   for (auto &op : operations_in_transaction) {
-    //      std::cout << op.op << " " << op.key << std::endl;
-    //   }
-    //   std::cout << "---" << std::endl;
+      //   for (auto &op : operations_in_transaction) {
+      //      std::cout << op.op << " " << op.key << std::endl;
+      //   }
+      //   std::cout << "---" << std::endl;
    }
 };
 

@@ -386,19 +386,22 @@ main(const int argc, const char *argv[])
             for (thr_i = 0; thr_i < num_threads; ++thr_i) {
                uint64_t start_op = (record_count * thr_i) / num_threads;
                uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
-               load_threads.emplace_back(std::thread(DelegateClient,
-                                                     thr_i,
-                                                     db,
-                                                     &wls[thr_i],
-                                                     end_op - start_op,
-                                                     true,
-                                                     pmode,
-                                                     record_count,
-                                                     &load_progress,
-                                                     &last_printed,
-                                                     nullptr,
-                                                     nullptr,
-                                                     &txn_cnts[thr_i]));
+               load_threads.emplace_back(
+                  std::thread(props.GetProperty("client") == "exp"
+                                 ? DelegateClient<ycsbc::ExpClient>
+                                 : DelegateClient<ycsbc::Client>,
+                              thr_i,
+                              db,
+                              &wls[thr_i],
+                              end_op - start_op,
+                              true,
+                              pmode,
+                              record_count,
+                              &load_progress,
+                              &last_printed,
+                              nullptr,
+                              nullptr,
+                              &txn_cnts[thr_i]));
                bind_to_cpu(load_threads, thr_i);
             }
             for (auto &t : load_threads) {
