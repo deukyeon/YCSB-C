@@ -3,6 +3,7 @@
 import sys
 import numpy as np
 import getopt
+import os
 
 
 def print_usage(retcode=0):
@@ -10,16 +11,16 @@ def print_usage(retcode=0):
     sys.exit(retcode)
 
 
-num_threads = 0
-opts, args = getopt.getopt(sys.argv[1:], 'ht:', ['help', 'threads='])
-for opt, arg in opts:
-    if opt in ('-h', '--help'):
-        print_usage(0)
-    elif opt in ('-t', '--threads'):
-        num_threads = int(arg)
+num_threads = 64
+# opts, args = getopt.getopt(sys.argv[1:], 'ht:', ['help', 'threads='])
+# for opt, arg in opts:
+#     if opt in ('-h', '--help'):
+#         print_usage(0)
+#     elif opt in ('-t', '--threads'):
+#         num_threads = int(arg)
 
-if num_threads == 0:
-    print_usage(1)
+# if num_threads == 0:
+#     print_usage(1)
 
 transaction_times = [[] for _ in range(num_threads)]
 execution_times = [[] for _ in range(num_threads)]
@@ -32,6 +33,8 @@ abort_validation_times = [[] for _ in range(num_threads)]
 
 for i in range(num_threads):
     filename = f'transaction_stats_{i}.txt'
+    if os.path.exists(filename) == False:
+        continue
     with open(filename, 'r') as f:
         for line in f:
             if line.startswith('abort_transaction_times'):
@@ -64,6 +67,8 @@ def print_stats(data):
     print("thread", "min", "med", "avg", "99", "max")
     aggregated = []
     for i in range(num_threads):
+        if len(data[i]) == 0:
+            continue
         print(i, int(np.min(data[i])), int(np.median(data[i])),
               int(np.mean(data[i])), int(np.percentile(data[i], 99)), int(np.max(data[i])))
         aggregated.extend(data[i])
