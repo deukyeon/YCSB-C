@@ -23,12 +23,18 @@ else:
     num_normal_bg_threads = 0
     num_memtable_bg_threads = 0
 
+total_num_threads = num_threads + num_normal_bg_threads + num_memtable_bg_threads
+
+max_threads = 60
+if total_num_threads > max_threads:
+    num_normal_bg_threads -= (total_num_threads - max_threads)
 
 ld_preload = 'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so'
 ycsbc = f'./ycsbc -db transactional_splinterdb \
     -threads {num_threads} \
     -L workloads/write_intensive_test.spec \
     -W workloads/write_intensive_test.spec \
+    -client txn \
     -p splinterdb.filename /dev/nvme1n1 \
     -p splinterdb.cache_size_mb 256 \
     -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
