@@ -141,8 +141,8 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             abort_rates.append(fields[-1])
 
     # print csv
-    # for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates, strict=True):
-    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, strict=True):
+    # for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates):
         print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
 
 
@@ -211,6 +211,9 @@ def main(argc, argv):
                 logfile.write(out.decode())
             # run_shell_command('rm -f splinterdb.db')
         logfile.close()
+    
+    for i in range(0, num_repeats):
+        log_path = f'/tmp/{label}.{i}.log'
         parseLogfile(log_path, csv, system, conf, i)
     csv.close()
 

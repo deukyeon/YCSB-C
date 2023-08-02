@@ -125,7 +125,7 @@ def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
             abort_rates.append(fields[-1])
 
     # print csv
-    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, strict=True):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates):
         print(system, conf, num_wh, ','.join(tuple), seq, sep=',', file=csv)
 
 
@@ -195,6 +195,10 @@ def main(argc, argv):
                 if out:
                     logfile.write(out.decode())
             logfile.close()
+            
+    for i in range(0, num_repeats):
+        for wh in num_warehouses:
+            log_path = f'/tmp/{label}-wh{wh}.{i}.log'
             parseLogfile(log_path, csv, system, conf, i, wh)
     csv.close()
 
