@@ -172,14 +172,29 @@ def main(argc, argv):
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
 
+    # This is the maximum number of threads that run YCSB clients.
     max_num_threads = min(os.cpu_count(), 32)
+    
+    # This is the maximum number of threads that can be run in parallel in the system.
+    max_total_threads = 60
 
-    splinterdb_opts = '-p splinterdb.filename /dev/nvme1n1 -p splinterdb.cache_size_mb 128'
+    dev_name = '/dev/md0'
+    cache_size_mb = 128
 
     cmds = []
-    # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
+        num_normal_bg_threads = thread
+        num_memtable_bg_threads = (thread + 9) // 10
+
+        total_num_threads = thread + num_normal_bg_threads + num_memtable_bg_threads
+        if total_num_threads > max_total_threads:
+            num_normal_bg_threads -= (total_num_threads - max_total_threads)
+        splinterdb_opts = '-p splinterdb.filename {dev_name} \
+                            -p splinterdb.cache_size_mb {cache_size_mb} \
+                            -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
+                            -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} \
+            -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):

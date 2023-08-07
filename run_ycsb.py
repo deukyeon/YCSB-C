@@ -56,6 +56,7 @@ system_sed_map = {
 available_workloads = [
     'write_intensive',
     'write_intensive_large_value',
+    'write_intensive_test',
 ]
 
 
@@ -178,15 +179,31 @@ def main(argc, argv):
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
     spec_file = 'workloads/' + conf + '.spec'
 
+    # This is the maximum number of threads that run YCSB clients.
     max_num_threads = min(os.cpu_count(), 32)
+    
+    # This is the maximum number of threads that can be run in parallel in the system.
+    max_total_threads = 60
 
-    dev_name = '/dev/nvme1n1'
+    dev_name = '/dev/md0'
+    cache_size_mb = 4096
 
     cmds = []
-    # for thread in [1, 2] + list(range(4, max_num_threads + 1, 4)):
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
-    # for thread in [32]:
-        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {thread} -P {spec_file} -W {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb 4096'
+        num_normal_bg_threads = thread
+        num_memtable_bg_threads = (thread + 9) // 10
+
+        total_num_threads = thread + num_normal_bg_threads + num_memtable_bg_threads
+        if total_num_threads > max_total_threads:
+            num_normal_bg_threads -= (total_num_threads - max_total_threads)
+
+        cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so \
+            ./ycsbc -db {db} -threads {thread} -client txn \
+            -P {spec_file} -W {spec_file} \
+            -p splinterdb.filename {dev_name} \
+            -p splinterdb.cache_size_mb {cache_size_mb} \
+            -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
+            -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):
