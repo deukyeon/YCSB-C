@@ -163,7 +163,7 @@ def main(argc, argv):
     force_to_run = False
 
     opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pfh', 
-                            ['system=', 'upsert', 'device', 'parse', 'force', 'help'])
+                            ['system=', 'upsert', 'device=', 'parse', 'force', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
