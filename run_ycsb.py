@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import getopt
 
 available_systems = [
     'splinterdb',
@@ -61,11 +62,13 @@ available_workloads = [
 
 
 def printHelp():
-    print("Usage:", sys.argv[0], "[system] [workload]", file=sys.stderr)
-    print("\t[system]: Choose one of the followings --",
+    print("Usage:", sys.argv[0], "-s [system] -w [workload] -f -p", file=sys.stderr)
+    print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
-    print("\t[workload]: Choose one of the followings --",
+    print("\t-w,--workload [workload]: Choose one of the followings --",
           available_workloads, file=sys.stderr)
+    print("\t-f,--force: Force to run (Delete all existing logs)", file=sys.stderr)
+    print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
     exit(1)
 
 
@@ -148,20 +151,28 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
 
 
 def main(argc, argv):
-    if argc < 2:
-        printHelp()
-
-    system = argv[1]
-    if system not in available_systems:
-        printHelp()
-
-    conf = argv[2]
-    if conf not in available_workloads:
-        printHelp()
-
     parse_result_only = False
-    if len(argv) > 3:
-        parse_result_only = bool(argv[3])
+    force_to_run = False
+
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:pf', ['system=', 'workload=', 'parse', 'force'])
+    system = None
+    conf = None
+    for opt, arg in opts:
+        if opt in ('-s', '--system'):
+            system = arg
+            if system not in available_systems:
+                printHelp()
+        elif opt in ('-w', '--workload'):
+            conf = arg
+            if conf not in available_workloads:
+                printHelp()
+        elif opt in ('-p', '--parse'):
+            parse_result_only = True
+        elif opt in ('-f', '--force'):
+            force_to_run = True
+
+    if not system or not conf:
+        printHelp()
 
     label = system + '-' + conf
     csv_path = f'{label}.csv'
@@ -208,6 +219,8 @@ def main(argc, argv):
 
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
+        if force_to_run:
+            os.remove(log_path)
         if os.path.isfile(log_path):
             continue
         logfile = open(log_path, 'w')

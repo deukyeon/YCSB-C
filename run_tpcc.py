@@ -3,6 +3,7 @@
 import os
 import subprocess
 import sys
+import getopt
 
 available_systems = [
     'splinterdb',
@@ -54,9 +55,12 @@ system_sed_map = {
 }
 
 def printHelp():
-    print("Usage:", sys.argv[0], "[system] [workload]", file=sys.stderr)
-    print("\t[system]: Choose one of the followings --",
+    print("Usage:", sys.argv[0], "-s [system] -u -f -p", file=sys.stderr)
+    print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
+    print("\t-u,--upsert: Enable the upsertification", file=sys.stderr)
+    print("\t-f,--force: Force to run (Delete all existing logs)", file=sys.stderr)
+    print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
     exit(1)
 
 
@@ -154,6 +158,24 @@ def main(argc, argv):
     parse_result_only = False
     if len(argv) > 3:
         parse_result_only = bool(argv[3])
+    
+    force_to_run = False
+
+    opts, _ = getopt.getopt(sys.argv[1:], 's:upf', ['system=', 'upsert', 'parse', 'force'])
+    system = None
+    conf = None
+    for opt, arg in opts:
+        if opt in ('-s', '--system'):
+            system = arg
+            if system not in available_systems:
+                printHelp()
+        elif opt in ('-u', '--upsert'):
+            conf = 'tpcc-upsert'
+            upsert_opt = '-upserts'
+        elif opt in ('-p', '--parse'):
+            parse_result_only = True
+        elif opt in ('-f', '--force'):
+            force_to_run = True
 
     num_repeats = 5
     num_warehouses = [4, 8, 32]
@@ -201,6 +223,8 @@ def main(argc, argv):
         for wh in num_warehouses:
             change_num_warehouses(wh)
             log_path = f'/tmp/{label}-wh{wh}.{i}.log'
+            if force_to_run:
+                os.remove(log_path)
             if os.path.isfile(log_path):
                 continue
             logfile = open(log_path, 'w')
