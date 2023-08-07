@@ -62,11 +62,12 @@ available_workloads = [
 
 
 def printHelp():
-    print("Usage:", sys.argv[0], "-s [system] -w [workload] -f -p", file=sys.stderr)
+    print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p ", file=sys.stderr)
     print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
     print("\t-w,--workload [workload]: Choose one of the followings --",
           available_workloads, file=sys.stderr)
+    print("\t-d,--device [device]: Choose the device for SplinterDB (default: /dev/md0)", file=sys.stderr)
     print("\t-f,--force: Force to run (Delete all existing logs)", file=sys.stderr)
     print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
     exit(1)
@@ -154,9 +155,12 @@ def main(argc, argv):
     parse_result_only = False
     force_to_run = False
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:w:pf', ['system=', 'workload=', 'parse', 'force'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pf', 
+                            ['system=', 'workload=', 'device=', 'parse', 'force'])
     system = None
     conf = None
+    dev_name = '/dev/md0'
+    
     for opt, arg in opts:
         if opt in ('-s', '--system'):
             system = arg
@@ -166,6 +170,11 @@ def main(argc, argv):
             conf = arg
             if conf not in available_workloads:
                 printHelp()
+        elif opt in ('-d', '--device'):
+            dev_name = arg
+            if not os.path.exists(dev_name):
+                print(f'Device {dev_name} does not exist.', file=sys.stderr)
+                exit(1)
         elif opt in ('-p', '--parse'):
             parse_result_only = True
         elif opt in ('-f', '--force'):
@@ -196,7 +205,6 @@ def main(argc, argv):
     # This is the maximum number of threads that can be run in parallel in the system.
     max_total_threads = 60
 
-    dev_name = '/dev/md0'
     cache_size_mb = 4096
 
     cmds = []
