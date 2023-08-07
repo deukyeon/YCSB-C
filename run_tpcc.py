@@ -162,12 +162,12 @@ def main(argc, argv):
     
     force_to_run = False
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pf', 
-                            ['system=', 'upsert', 'device', 'parse', 'force'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pfh', 
+                            ['system=', 'upsert', 'device', 'parse', 'force', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
-    
+
     for opt, arg in opts:
         if opt in ('-s', '--system'):
             system = arg
@@ -185,6 +185,8 @@ def main(argc, argv):
             parse_result_only = True
         elif opt in ('-f', '--force'):
             force_to_run = True
+        elif opt in ('-h', '--help'):
+            printHelp()
 
     num_repeats = 5
     num_warehouses = [4, 8, 32]

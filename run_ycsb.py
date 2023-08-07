@@ -155,12 +155,12 @@ def main(argc, argv):
     parse_result_only = False
     force_to_run = False
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pf', 
-                            ['system=', 'workload=', 'device=', 'parse', 'force'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pfh', 
+                            ['system=', 'workload=', 'device=', 'parse', 'force', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
-    
+
     for opt, arg in opts:
         if opt in ('-s', '--system'):
             system = arg
@@ -179,6 +179,8 @@ def main(argc, argv):
             parse_result_only = True
         elif opt in ('-f', '--force'):
             force_to_run = True
+        elif opt in ('-h', '--help'):
+            printHelp()
 
     if not system or not conf:
         printHelp()
