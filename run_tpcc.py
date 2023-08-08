@@ -233,10 +233,11 @@ def main(argc, argv):
         for wh in num_warehouses:
             change_num_warehouses(wh)
             log_path = f'/tmp/{label}-wh{wh}.{i}.log'
-            if force_to_run:
-                os.remove(log_path)
             if os.path.isfile(log_path):
-                continue
+                if force_to_run:
+                    os.remove(log_path)
+                else:
+                    continue
             logfile = open(log_path, 'w')
             for cmd in cmds:
                 logfile.write(f'{cmd}\n')

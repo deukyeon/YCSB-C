@@ -229,10 +229,11 @@ def main(argc, argv):
 
     for i in range(0, num_repeats):
         log_path = f'/tmp/{label}.{i}.log'
-        if force_to_run:
-            os.remove(log_path)
         if os.path.isfile(log_path):
-            continue
+            if force_to_run:
+                os.remove(log_path)
+            else:
+                continue
         logfile = open(log_path, 'w')
         specfile = open(spec_file, 'r')
         logfile.writelines(specfile.readlines())
