@@ -97,6 +97,7 @@ def buildSystem(sys):
         for sed in system_sed_map[sys]:
             run_shell_command(sed, shell=True)
     run_shell_command('sudo -E make install')
+    run_shell_command('sudo ldconfig')
     os.chdir(current_dir)
     run_shell_command('make clean')
     run_shell_command('make')
