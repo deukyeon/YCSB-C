@@ -4,55 +4,7 @@ import os
 import subprocess
 import sys
 import getopt
-
-available_systems = [
-    'splinterdb',
-    'tictoc-disk',
-    'silo-disk',
-    'baseline-serial',
-    'baseline-parallel',
-    'silo-memory',
-    'tictoc-memory',
-    'tictoc-counter',
-    'tictoc-sketch',
-    'sto-sketch',
-    'sto-counter',
-    'sto-memory'
-]
-
-system_branch_map = {
-    'splinterdb': 'deukyeon/fantastiCC-refactor',
-    'tictoc-disk': 'deukyeon/fantastiCC-refactor',
-    'silo-disk': 'deukyeon/silo-disk',
-    'baseline-serial': 'deukyeon/baseline',
-    'baseline-parallel': 'deukyeon/baseline',
-    'silo-memory': 'deukyeon/fantastiCC-refactor',
-    'tictoc-memory': 'deukyeon/fantastiCC-refactor',
-    'tictoc-counter': 'deukyeon/fantastiCC-refactor',
-    'tictoc-sketch': 'deukyeon/fantastiCC-refactor',
-    'sto-sketch': 'deukyeon/fantastiCC-refactor',
-    'sto-counter': 'deukyeon/fantastiCC-refactor',
-    'sto-memory': 'deukyeon/fantastiCC-refactor'
-}
-
-system_sed_map = {
-    'baseline-parallel': ["sed -i 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g' src/transaction_private.h"],
-    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h"],
-    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_DISK [ ]*0/#define EXPERIMENTAL_MODE_DISK 1/g' src/experimental_mode.h"],
-    'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MEMORY 1/g' src/experimental_mode.h"],
-    'tictoc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                       "sed -i 's/#define EXPERIMENTAL_MODE_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_COUNTER 1/g' src/experimental_mode.h"],
-    'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
-    'sto-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                   "sed -i 's/#define EXPERIMENTAL_MODE_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MEMORY 1/g' src/experimental_mode.h"],
-    'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                   "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
-    'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_COUNTER 1/g' src/experimental_mode.h"]
-}
+from exp_system import ExpSystem
 
 def printHelp():
     print("Usage:", sys.argv[0], "-s [system] -u -d [device] -f -p", file=sys.stderr)
@@ -80,24 +32,6 @@ def run_shell_command(cmd, parse=True, shell=False):
     if err:
         print(err.decode(), file=sys.stderr)
     return out, err
-
-
-def buildSystem(sys):
-    current_dir = os.getcwd()
-    splinterdb_dir = '../splinterdb'
-    os.chdir(splinterdb_dir)
-    run_shell_command('git checkout -- .')
-    run_shell_command(f'git checkout {system_branch_map[sys]}')
-    run_shell_command('sudo -E make clean')
-    if sys in system_sed_map:
-        for sed in system_sed_map[sys]:
-            run_shell_command(sed, shell=True)
-    run_shell_command('sudo -E make install')
-    run_shell_command('sudo ldconfig')
-    os.chdir(current_dir)
-    run_shell_command('make clean')
-    run_shell_command('make')
-
 
 def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
     f = open(logfile_path, "r")
@@ -202,7 +136,7 @@ def main(argc, argv):
                 parseLogfile(log_path, csv, system, conf, i, wh)
         return
 
-    buildSystem(system)
+    ExpSystem.build(system, '../splinterdb')
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
 

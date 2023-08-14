@@ -4,6 +4,7 @@ import os
 import subprocess
 import sys
 import getopt
+from exp_system import ExpSystem
 
 available_systems = [
     'splinterdb',
@@ -17,7 +18,8 @@ available_systems = [
     'tictoc-sketch',
     'sto-sketch',
     'sto-counter',
-    'sto-memory'
+    'sto-memory',
+    '2pl'
 ]
 
 system_branch_map = {
@@ -32,26 +34,21 @@ system_branch_map = {
     'tictoc-sketch': 'deukyeon/fantastiCC-refactor',
     'sto-sketch': 'deukyeon/fantastiCC-refactor',
     'sto-counter': 'deukyeon/fantastiCC-refactor',
-    'sto-memory': 'deukyeon/fantastiCC-refactor'
+    'sto-memory': 'deukyeon/fantastiCC-refactor',
+    '2pl': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
     'baseline-parallel': ["sed -i 's/\/\/ #define PARALLEL_VALIDATION/#define PARALLEL_VALIDATION/g' src/transaction_private.h"],
-    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO [ ]*0/#define EXPERIMENTAL_MODE_SILO 1/g' src/experimental_mode.h"],
-    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_DISK [ ]*0/#define EXPERIMENTAL_MODE_DISK 1/g' src/experimental_mode.h"],
-    'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MEMORY 1/g' src/experimental_mode.h"],
-    'tictoc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                       "sed -i 's/#define EXPERIMENTAL_MODE_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_COUNTER 1/g' src/experimental_mode.h"],
-    'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC [ ]*0/#define EXPERIMENTAL_MODE_TICTOC 1/g' src/experimental_mode.h",
-                      "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
-    'sto-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                   "sed -i 's/#define EXPERIMENTAL_MODE_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MEMORY 1/g' src/experimental_mode.h"],
-    'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                   "sed -i 's/#define EXPERIMENTAL_MODE_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_SKETCH 1/g' src/experimental_mode.h"],
-    'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO [ ]*0/#define EXPERIMENTAL_MODE_STO 1/g' src/experimental_mode.h",
-                    "sed -i 's/#define EXPERIMENTAL_MODE_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_COUNTER 1/g' src/experimental_mode.h"]
+    'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_SILO_MEMORY 1/g' src/experimental_mode.h"],
+    'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h"],
+    'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h"],
+    'tictoc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_COUNTER 1/g' src/experimental_mode.h"],
+    'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_SKETCH 1/g' src/experimental_mode.h"],
+    'sto-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_STO_MEMORY 1/g' src/experimental_mode.h"],
+    'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_STO_SKETCH 1/g' src/experimental_mode.h"],
+    'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_STO_COUNTER 1/g' src/experimental_mode.h"],
+    '2pl': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL [ ]*0/#define EXPERIMENTAL_MODE_2PL 1/g' src/experimental_mode.h"],
 }
 
 available_workloads = [
@@ -85,31 +82,13 @@ def run_shell_command(cmd, parse=True, shell=False):
         print(err.decode(), file=sys.stderr)
     return out, err
 
-
-def buildSystem(sys):
-    current_dir = os.getcwd()
-    splinterdb_dir = '../splinterdb'
-    os.chdir(splinterdb_dir)
-    run_shell_command('git checkout -- .')
-    run_shell_command(f'git checkout {system_branch_map[sys]}')
-    run_shell_command('sudo -E make clean')
-    if sys in system_sed_map:
-        for sed in system_sed_map[sys]:
-            run_shell_command(sed, shell=True)
-    run_shell_command('sudo -E make install')
-    run_shell_command('sudo ldconfig')
-    os.chdir(current_dir)
-    run_shell_command('make clean')
-    run_shell_command('make')
-
-
 def parseLogfile(logfile_path, csv, system, conf, seq):
     f = open(logfile_path, "r")
     lines = f.readlines()
     f.close()
 
-    load_threads = []
-    load_tputs = []
+    # load_threads = []
+    # load_tputs = []
     run_threads = []
     run_tputs = []
 
@@ -197,7 +176,7 @@ def main(argc, argv):
             parseLogfile(log_path, csv, system, conf, i)
         return
 
-    buildSystem(system)
+    ExpSystem.build(system, '../splinterdb')
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
     spec_file = 'workloads/' + conf + '.spec'
