@@ -1,4 +1,5 @@
 import os
+import time
 
 available_systems = [
     'splinterdb',
@@ -51,10 +52,7 @@ class ExpSystem:
         os.environ['CC'] = 'clang'
         os.environ['LD'] = 'clang'
         current_dir = os.getcwd()
-        backup_file = 'splinterdb-backup.tar.gz'
-        if os.path.exists(backup_file):
-            os.remove(backup_file)
-        os.system(f'tar czf splinterdb-backup.tar.gz {splinterdb_dir}')
+        os.system(f'tar czf splinterdb-backup-{time.time()}.tar.gz {splinterdb_dir}')
         os.chdir(splinterdb_dir)
         os.system('git checkout -- .')
         os.system(f'git checkout {system_branch_map[sys]}')
