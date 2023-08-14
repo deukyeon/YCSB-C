@@ -52,7 +52,7 @@ class ExpSystem:
         os.environ['LD'] = 'clang'
         current_dir = os.getcwd()
         backup_file = 'splinterdb-backup.tar.gz'
-        if os.file.exists(backup_file):
+        if os.path.exists(backup_file):
             os.remove(backup_file)
         os.system(f'tar czf splinterdb-backup.tar.gz {splinterdb_dir}')
         os.chdir(splinterdb_dir)
