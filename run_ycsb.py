@@ -61,7 +61,7 @@ available_workloads = [
 
 
 def printHelp():
-    print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p ", file=sys.stderr)
+    print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p -b -c [cache_size_mb] -h", file=sys.stderr)
     print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
     print("\t-w,--workload [workload]: Choose one of the followings --",
@@ -69,6 +69,9 @@ def printHelp():
     print("\t-d,--device [device]: Choose the device for SplinterDB (default: /dev/md0)", file=sys.stderr)
     print("\t-f,--force: Force to run (Delete all existing logs)", file=sys.stderr)
     print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
+    print("\t-b,--bgthreads: Enable background threads", file=sys.stderr)
+    print("\t-c,--cachesize: Set the cache size in MB (default: 4096)", file=sys.stderr)
+    print("\t-h,--help: Print this help message", file=sys.stderr)
     exit(1)
 
 
@@ -136,9 +139,11 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
 def main(argc, argv):
     parse_result_only = False
     force_to_run = False
+    enable_bgthreads = False
+    cache_size_mb = 4096
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pfh', 
-                            ['system=', 'workload=', 'device=', 'parse', 'force', 'help'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pfbc:h', 
+                            ['system=', 'workload=', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
@@ -161,6 +166,10 @@ def main(argc, argv):
             parse_result_only = True
         elif opt in ('-f', '--force'):
             force_to_run = True
+        elif opt in ('-b', '--bgthreads'):
+            enable_bgthreads = True
+        elif opt in ('-c', '--cachesize'):
+            cache_size_mb = int(arg)
         elif opt in ('-h', '--help'):
             printHelp()
 
@@ -182,23 +191,29 @@ def main(argc, argv):
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
     spec_file = 'workloads/' + conf + '.spec'
-
-    # This is the maximum number of threads that run YCSB clients.
-    max_num_threads = min(os.cpu_count(), 32)
     
     # This is the maximum number of threads that can be run in parallel in the system.
     max_total_threads = 60
 
-    cache_size_mb = 4096
+    # This is the maximum number of threads that run YCSB clients.
+    max_num_threads = min(os.cpu_count(), max_total_threads)
 
     cmds = []
     for thread in [1] + list(range(4, max_num_threads + 1, 4)):
-        num_normal_bg_threads = thread
-        num_memtable_bg_threads = (thread + 9) // 10
+        if enable_bgthreads:
+            num_normal_bg_threads = thread
+            num_memtable_bg_threads = (thread + 9) // 10
 
-        total_num_threads = thread + num_normal_bg_threads + num_memtable_bg_threads
-        if total_num_threads > max_total_threads:
-            num_normal_bg_threads -= (total_num_threads - max_total_threads)
+            total_num_threads = thread + num_normal_bg_threads + num_memtable_bg_threads
+            if total_num_threads > max_total_threads:
+                num_normal_bg_threads = max(0, num_normal_bg_threads - (total_num_threads - max_total_threads))
+            
+            total_num_threads = thread + num_normal_bg_threads + num_memtable_bg_threads
+            if total_num_threads > max_total_threads:
+                num_memtable_bg_threads = max(0, num_memtable_bg_threads - (total_num_threads - max_total_threads))
+        else:
+            num_normal_bg_threads = 0
+            num_memtable_bg_threads = 0
 
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so \
             ./ycsbc -db {db} -threads {thread} -client txn \
@@ -227,7 +242,7 @@ def main(argc, argv):
                 'echo 1 | sudo tee /proc/sys/vm/drop_caches > /dev/null')
 
             # run load phase
-            run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb 4096', shell=True)
+            run_shell_command(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb {cache_size_mb}', shell=True)
 
             out, _ = run_shell_command(cmd, shell=True)
             if out:
