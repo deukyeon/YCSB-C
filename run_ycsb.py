@@ -55,6 +55,8 @@ available_workloads = [
     'write_intensive',
     'write_intensive_large_value',
     'write_intensive_test',
+    'read_intensive',
+    'read_intensive_test',
 ]
 
 
