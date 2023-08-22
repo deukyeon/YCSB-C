@@ -313,7 +313,9 @@ TransactionalSplinterDB::Insert(const std::string   &table,
    slice       key_slice = slice_create(key.size(), key.c_str());
    slice       val_slice = slice_create(val.size(), val.c_str());
    // cout << "insert " << key << endl;
-   transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
+   // transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
+   const splinterdb *non_txn_spl = transactional_splinterdb_get_db(spl);
+   splinterdb_insert(non_txn_spl, key_slice, val_slice);
    // cout << "done insert " << key << endl;
 
    return DB::kOK;
@@ -346,7 +348,9 @@ TransactionalSplinterDB::Store(void    *key,
    slice val_slice = slice_create(value_size, value);
    // printf("Store key (%lu, %lu)\n", *(uint64_t*)key, *((uint64_t*)key+1));
 
-   transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
+   // transactional_splinterdb_insert(spl, NULL, key_slice, val_slice);
+   const splinterdb *non_txn_spl = transactional_splinterdb_get_db(spl);
+   splinterdb_insert(non_txn_spl, key_slice, val_slice);
 
    return DB::kOK;
 }
