@@ -8,6 +8,7 @@ import time
 def signal_handler(sig, frame):
     print("Received signal:", sig)
     print("Exiting...")
+    os.remove(results_path)
     sys.exit(0)
 
 # Register the signal handler for SIGINT
