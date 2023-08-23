@@ -3,6 +3,7 @@
 import os
 import signal
 import sys
+import time
 
 def signal_handler(sig, frame):
     print("Received signal:", sig)
@@ -18,6 +19,9 @@ splinterdb_path = "../splinterdb"
 results_path = os.path.join(ycsb_path, "sketch_size_exp")
 if not os.path.exists(results_path):
     os.mkdir(results_path)
+
+results_path = os.path.join(results_path, f"{time.time()}")
+os.mkdir(results_path)
 
 # assume the branch of splinterdb is deukyeon/fantastiCC-refactor
 os.chdir(splinterdb_path)
