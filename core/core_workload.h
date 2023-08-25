@@ -195,6 +195,8 @@ public:
    NextSequenceKey(std::string &buffer); /// Used for loading data
    virtual std::string
    NextTransactionKey(); /// Used for transactions
+   virtual std::string
+   NextTransactionKey(uint8_t thread_id);
    virtual Operation
    NextOperation()
    {
@@ -355,6 +357,16 @@ CoreWorkload::NextTransactionKey()
    do {
       key_num = key_chooser_->Next();
    } while (key_num > key_generator_->Last());
+   return BuildKeyName(key_num);
+}
+
+inline std::string
+CoreWorkload::NextTransactionKey(uint8_t thread_id)
+{
+   uint64_t key_num;
+   do {
+      key_num = key_chooser_->Next();
+   } while (key_num > key_generator_->Last() || key_num % 64 != thread_id);
    return BuildKeyName(key_num);
 }
 

@@ -74,6 +74,20 @@ protected:
       // }
       // std::cout << "---" << std::endl;
    }
+   
+   inline void
+   GenerateClientOperationUpdate(ClientOperation &client_op)
+   {
+      client_op.op    = UPDATE;
+      client_op.table = workload_.NextTable();
+      client_op.key   = workload_.NextTransactionKey(id_);
+
+      if (workload_.write_all_fields()) {
+         workload_.BuildValues(client_op.values);
+      } else {
+         workload_.BuildUpdate(client_op.values);
+      }
+   }
 };
 
 } // namespace ycsbc
