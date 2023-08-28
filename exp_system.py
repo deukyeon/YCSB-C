@@ -1,5 +1,6 @@
 import os
 import time
+import subprocess
 
 available_systems = [
     'splinterdb',
@@ -49,19 +50,25 @@ system_sed_map = {
 class ExpSystem:
     @staticmethod
     def build(sys, splinterdb_dir):
+
+
+        def run_cmd(cmd):
+            subprocess.call(cmd, shell=True)
+        
+
         os.environ['CC'] = 'clang'
         os.environ['LD'] = 'clang'
         current_dir = os.getcwd()
-        os.system(f'tar czf splinterdb-backup-{time.time()}.tar.gz {splinterdb_dir}')
+        run_cmd(f'tar czf splinterdb-backup-{time.time()}.tar.gz {splinterdb_dir}')
         os.chdir(splinterdb_dir)
-        os.system('git checkout -- .')
-        os.system(f'git checkout {system_branch_map[sys]}')
-        os.system('sudo -E make clean')
+        run_cmd('git checkout -- .')
+        run_cmd(f'git checkout {system_branch_map[sys]}')
+        run_cmd('sudo -E make clean')
         if sys in system_sed_map:
             for sed in system_sed_map[sys]:
-                os.system(sed)
-        os.system('sudo -E make install')
-        os.system('sudo ldconfig')
+                run_cmd(sed)
+        run_cmd('sudo -E make install')
+        run_cmd('sudo ldconfig')
         os.chdir(current_dir)
-        os.system('make clean')
-        os.system('make')
+        run_cmd('make clean')
+        run_cmd('make')
