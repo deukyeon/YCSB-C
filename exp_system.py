@@ -15,7 +15,9 @@ available_systems = [
     'sto-sketch',
     'sto-counter',
     'sto-memory',
-    '2pl'
+    '2pl-no-wait',
+    '2pl-wait-die',
+    '2pl-wound-wait'
 ]
 
 system_branch_map = {
@@ -31,7 +33,9 @@ system_branch_map = {
     'sto-sketch': 'deukyeon/fantastiCC-refactor',
     'sto-counter': 'deukyeon/fantastiCC-refactor',
     'sto-memory': 'deukyeon/fantastiCC-refactor',
-    '2pl': 'deukyeon/fantastiCC-refactor'
+    '2pl-no-wait': 'deukyeon/fantastiCC-refactor',
+    '2pl-wait-die': 'deukyeon/fantastiCC-refactor',
+    '2pl-wound-wait': 'deukyeon/fantastiCC-refactor'
 }
 
 system_sed_map = {
@@ -44,7 +48,9 @@ system_sed_map = {
     'sto-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_STO_MEMORY 1/g' src/experimental_mode.h"],
     'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_STO_SKETCH 1/g' src/experimental_mode.h"],
     'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_STO_COUNTER 1/g' src/experimental_mode.h"],
-    '2pl': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL [ ]*0/#define EXPERIMENTAL_MODE_2PL 1/g' src/experimental_mode.h"],
+    '2pl-no-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_NO_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_NO_WAIT 1/g' src/experimental_mode.h"],
+    '2pl-wait-die': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE [ ]*0/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE 1/g' src/experimental_mode.h"],
+    '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"]
 }
 
 class ExpSystem:
