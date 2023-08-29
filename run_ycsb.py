@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 import getopt
-from exp_system import ExpSystem
+from exp_system import *
 
 
 available_workloads = [
