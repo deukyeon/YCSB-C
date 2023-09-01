@@ -4,7 +4,7 @@ import os
 import subprocess
 import sys
 import getopt
-from exp_system import ExpSystem
+from exp_system import *
 
 def printHelp():
     print("Usage:", sys.argv[0], "-s [system] -u -d [device] -f -p -b -c [cache_size_mb] -h", file=sys.stderr)
@@ -80,33 +80,16 @@ def change_num_warehouses(num_wh):
 
 
 def main(argc, argv):
-    if argc < 2:
-        printHelp()
-
-    system = argv[1]
-    if system not in available_systems:
-        printHelp()
-
-    conf = 'tpcc'
-
-    upsert_opt = ''
-    if len(argv) > 2 and argv[2] == 'upsert':
-        conf = 'tpcc-upsert'
-        upsert_opt = '-upserts'
-
-    parse_result_only = False
-    if len(argv) > 3:
-        parse_result_only = bool(argv[3])
-    
-    force_to_run = False
-    enable_bgthreads = False
-    cache_size_mb = 128
-
     opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pfbc:h', 
                             ['system=', 'upsert', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'help'])
     system = None
-    conf = None
     dev_name = '/dev/md0'
+    conf = 'tpcc'
+    upsert_opt = ''
+    parse_result_only = False
+    force_to_run = False
+    enable_bgthreads = False
+    cache_size_mb = 128
 
     for opt, arg in opts:
         if opt in ('-s', '--system'):
@@ -172,7 +155,7 @@ def main(argc, argv):
             num_normal_bg_threads = 0
             num_memtable_bg_threads = 0
 
-        splinterdb_opts = '-p splinterdb.filename {dev_name} \
+        splinterdb_opts = f'-p splinterdb.filename {dev_name} \
                             -p splinterdb.cache_size_mb {cache_size_mb} \
                             -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
                             -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
