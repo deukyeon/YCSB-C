@@ -15,6 +15,7 @@ try:
         df = pd.read_csv(csvfile)
         df = df.select_dtypes(include=np.number)
         df = df.groupby(by=groupby_key[bench]).agg('mean')
+        df.drop('seq', axis=1, inplace=True)
         print(df)
 except Exception as e:
     print(e)
