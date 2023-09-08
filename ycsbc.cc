@@ -271,12 +271,14 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
 }
 
 struct tpcc_stats {
-   uint64_t txn_cnt;
-   uint64_t abort_cnt;
-   uint64_t abort_cnt_payment;
-   uint64_t abort_cnt_new_order;
-   uint64_t attempts_payment;
-   uint64_t attempts_new_order;
+   uint64_t            txn_cnt;
+   uint64_t            abort_cnt;
+   uint64_t            abort_cnt_payment;
+   uint64_t            abort_cnt_new_order;
+   uint64_t            attempts_payment;
+   uint64_t            attempts_new_order;
+   std::vector<double> commit_txn_latencies;
+   std::vector<double> abort_txn_latencies;
 };
 
 int
@@ -291,12 +293,14 @@ DelegateTPCCClient(uint32_t            thread_id,
    client.run_transactions();
 
    if (stats) {
-      stats->txn_cnt             = client.GetTxnCnt();
-      stats->abort_cnt           = client.GetAbortCnt();
-      stats->abort_cnt_payment   = client.GetAbortCntPayment();
-      stats->abort_cnt_new_order = client.GetAbortCntNewOrder();
-      stats->attempts_payment    = client.GetAttemptsPayment();
-      stats->attempts_new_order  = client.GetAttemptsNewOrder();
+      stats->txn_cnt              = client.GetTxnCnt();
+      stats->abort_cnt            = client.GetAbortCnt();
+      stats->abort_cnt_payment    = client.GetAbortCntPayment();
+      stats->abort_cnt_new_order  = client.GetAbortCntNewOrder();
+      stats->attempts_payment     = client.GetAttemptsPayment();
+      stats->attempts_new_order   = client.GetAttemptsNewOrder();
+      stats->commit_txn_latencies = client.GetCommitTxnLatnecies();
+      stats->abort_txn_latencies  = client.GetAbortTxnLatnecies();
    }
 
    db->Close();
@@ -319,6 +323,27 @@ bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
    // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
    // std::endl;
 }
+
+void
+PrintLatencyStatistics(std::vector<double> &latencies,
+                       std::ostream        &out = std::cout)
+{
+   if (latencies.empty()) {
+      return;
+   }
+
+   out << "Min: " << latencies.front() << std::endl;
+   out << "Max: " << latencies.back() << std::endl;
+   out << "Avg: "
+       << std::accumulate(latencies.begin(), latencies.end(), 0.0)
+             / latencies.size()
+       << std::endl;
+   out << "P50: " << latencies[latencies.size() / 2] << std::endl;
+   out << "P90: " << latencies[latencies.size() * 9 / 10] << std::endl;
+   out << "P95: " << latencies[latencies.size() * 95 / 100] << std::endl;
+   out << "P99: " << latencies[latencies.size() * 99 / 100] << std::endl;
+   out << "P99.9: " << latencies[latencies.size() * 999 / 1000] << std::endl;
+};
 
 int
 main(const int argc, const char *argv[])
@@ -416,6 +441,32 @@ main(const int argc, const char *argv[])
       cout << "# (Payment) Total attempts:\t" << total_attempts_payment << '\n';
       cout << "# (NewOrder) Total attempts:\t" << total_attempts_new_order
            << '\n';
+
+      /*
+       * Print Latencies
+       */
+      std::vector<double> total_commit_txn_latencies;
+      std::vector<double> total_abort_txn_latencies;
+      for (unsigned int i = 0; i < num_threads; ++i) {
+         total_commit_txn_latencies.insert(
+            total_commit_txn_latencies.end(),
+            _tpcc_stats[i].commit_txn_latencies.begin(),
+            _tpcc_stats[i].commit_txn_latencies.end());
+         total_abort_txn_latencies.insert(
+            total_abort_txn_latencies.end(),
+            _tpcc_stats[i].abort_txn_latencies.begin(),
+            _tpcc_stats[i].abort_txn_latencies.end());
+      }
+
+      std::sort(total_commit_txn_latencies.begin(),
+                total_commit_txn_latencies.end());
+      std::sort(total_abort_txn_latencies.begin(),
+                total_abort_txn_latencies.end());
+
+      std::cout << "# Commit Latencies (us)" << std::endl;
+      PrintLatencyStatistics(total_commit_txn_latencies);
+      std::cout << "# Abort Latencies (us)" << std::endl;
+      PrintLatencyStatistics(total_abort_txn_latencies);
 
       db->PrintDBStats();
    } else {
@@ -618,32 +669,10 @@ main(const int argc, const char *argv[])
          std::sort(total_abort_txn_latencies.begin(),
                    total_abort_txn_latencies.end());
 
-         auto print_latency_statistics = [](std::vector<double> &latencies,
-                                            std::ostream &out = std::cout) {
-            if (latencies.empty()) {
-               return;
-            }
-
-            out << "Min: " << latencies.front() << std::endl;
-            out << "Max: " << latencies.back() << std::endl;
-            out << "Avg: "
-                << std::accumulate(latencies.begin(), latencies.end(), 0.0)
-                      / latencies.size()
-                << std::endl;
-            out << "P50: " << latencies[latencies.size() / 2] << std::endl;
-            out << "P90: " << latencies[latencies.size() * 9 / 10] << std::endl;
-            out << "P95: " << latencies[latencies.size() * 95 / 100]
-                << std::endl;
-            out << "P99: " << latencies[latencies.size() * 99 / 100]
-                << std::endl;
-            out << "P99.9: " << latencies[latencies.size() * 999 / 1000]
-                << std::endl;
-         };
-
          std::cout << "# Commit Latencies (us)" << std::endl;
-         print_latency_statistics(total_commit_txn_latencies);
+         PrintLatencyStatistics(total_commit_txn_latencies);
          std::cout << "# Abort Latencies (us)" << std::endl;
-         print_latency_statistics(total_abort_txn_latencies);
+         PrintLatencyStatistics(total_abort_txn_latencies);
 
          db->PrintDBStats();
       }
