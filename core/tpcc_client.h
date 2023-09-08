@@ -12,6 +12,7 @@
 #include "tpcc_workload.h"
 #include "db.h"
 #include "utils.h"
+#include "timer.h"
 #include <atomic>
 #include <chrono>
 #include <cmath>
@@ -79,6 +80,17 @@ public:
       return attempts_new_order;
    }
 
+   const std::vector<double> &
+   GetCommitTxnLatnecies() const
+   {
+      return commit_txn_latencies;
+   }
+   const std::vector<double> &
+   GetAbortTxnLatnecies() const
+   {
+      return abort_txn_latencies;
+   }
+
    // static std::atomic<unsigned long> total_abort_cnt;
 
 protected:
@@ -92,6 +104,10 @@ protected:
 
    unsigned long attempts_payment;
    unsigned long attempts_new_order;
+
+   std::vector<double>  commit_txn_latencies;
+   std::vector<double>  abort_txn_latencies;
+   utils::Timer<double> timer;
 };
 
 inline bool
@@ -106,6 +122,8 @@ TPCCClient::run_transactions()
 
       bool     need_retry = false;
       uint32_t retry      = 0;
+
+      timer.Start();
       do {
          switch (current_txn_type) {
             case TPCC_PAYMENT:
@@ -141,8 +159,15 @@ TPCCClient::run_transactions()
             ++txn_cnt;
          }
       } while (need_retry && retry <= g_max_txn_retry);
-   }
 
+      double latency_sec = timer.End();
+      double latency_us  = latency_sec * 1000000;
+      if (need_retry) {
+         abort_txn_latencies.push_back(latency_us);
+      } else {
+         commit_txn_latencies.push_back(latency_us);
+      }
+   }
    return true;
 }
 
