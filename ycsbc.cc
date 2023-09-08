@@ -142,7 +142,36 @@ ProgressFinish(progress_mode      pmode,
       pmode, total_ops, global_op_counter, i % sync_interval, last_printed);
 }
 
-class YCSBStats {
+class YCSBInput {
+public:
+   ycsbc::DB                      *db;
+   ycsbc::CoreWorkload            *wl;
+   uint64_t                        total_num_clients;
+   uint64_t                        num_ops;
+   bool                            is_loading;
+   progress_mode                   pmode;
+   uint64_t                        total_ops;
+   volatile uint64_t              *global_op_counter;
+   volatile uint64_t              *last_printed;
+   double                          benchmark_seconds;
+   utils::Timer<double>            benchmark_timer;
+   volatile std::atomic<uint64_t> *global_num_clients_done;
+
+
+   YCSBInput()
+      : db(nullptr),
+        wl(nullptr),
+        num_ops(0),
+        is_loading(false),
+        pmode(no_progress),
+        total_ops(0),
+        global_op_counter(nullptr),
+        last_printed(nullptr),
+        benchmark_seconds(0),
+        global_num_clients_done(nullptr){};
+};
+
+class YCSBOutput {
 public:
    uint64_t            commit_cnt;
    uint64_t            abort_cnt;
@@ -150,64 +179,94 @@ public:
    std::vector<double> commit_txn_latencies;
    std::vector<double> abort_txn_latencies;
 
-   YCSBStats() : commit_cnt(0), abort_cnt(0), txn_cnt(0){};
+   YCSBOutput() : commit_cnt(0), abort_cnt(0), txn_cnt(0){};
 };
 
 template<class Client = ycsbc::Client>
 void
-DelegateClient(int                  id,
-               ycsbc::DB           *db,
-               ycsbc::CoreWorkload *wl,
-               const uint64_t       num_ops,
-               bool                 is_loading,
-               progress_mode        pmode,
-               uint64_t             total_ops,
-               volatile uint64_t   *global_op_counter,
-               volatile uint64_t   *last_printed,
-               YCSBStats           *stats)
+DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
 {
    // Hoping this atomic shared variable is not bottlenecked.
    // static std::atomic<bool> run_bench;
    // run_bench.store(true);
-   db->Init();
-   Client client(id, *db, *wl);
+   input->db->Init();
+   Client client(id, *input->db, *input->wl);
 
    uint64_t txn_cnt = 0;
 
-   if (is_loading) {
-      for (uint64_t i = 0; i < num_ops; ++i) {
+   if (input->is_loading) {
+      for (uint64_t i = 0; i < input->num_ops; ++i) {
          txn_cnt += client.DoInsert();
-         ProgressUpdate(pmode, total_ops, global_op_counter, i, last_printed);
+         ProgressUpdate(input->pmode,
+                        input->total_ops,
+                        input->global_op_counter,
+                        i,
+                        input->last_printed);
       }
    } else {
-      if (wl->max_txn_count() > 0) {
-         // while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
-         while (txn_cnt < wl->max_txn_count()) {
+      if (input->benchmark_seconds > 0) {
+         // timer-based running -- all clients make sure running at
+         // least benchmark_seconds
+         input->benchmark_timer.Start();
+         while (input->global_num_clients_done->load()
+                < input->total_num_clients) {
             txn_cnt += client.DoTransaction();
-            ProgressUpdate(
-               pmode, total_ops, global_op_counter, txn_cnt, last_printed);
+            ProgressUpdate(input->pmode,
+                           input->total_ops,
+                           input->global_op_counter,
+                           txn_cnt,
+                           input->last_printed);
+            double duration = input->benchmark_timer.End();
+            if (duration > input->benchmark_seconds) {
+               input->global_num_clients_done->fetch_add(1);
+            }
          }
-         ProgressFinish(
-            pmode, total_ops, global_op_counter, txn_cnt, last_printed);
+         ProgressFinish(input->pmode,
+                        input->total_ops,
+                        input->global_op_counter,
+                        txn_cnt,
+                        input->last_printed);
+
+      } else if (input->wl->max_txn_count() > 0) {
+         // while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
+         while (txn_cnt < input->wl->max_txn_count()) {
+            txn_cnt += client.DoTransaction();
+            ProgressUpdate(input->pmode,
+                           input->total_ops,
+                           input->global_op_counter,
+                           txn_cnt,
+                           input->last_printed);
+         }
+         ProgressFinish(input->pmode,
+                        input->total_ops,
+                        input->global_op_counter,
+                        txn_cnt,
+                        input->last_printed);
          // run_bench.store(false);
       } else {
-         for (uint64_t i = 0; i < num_ops; ++i) {
+         for (uint64_t i = 0; i < input->num_ops; ++i) {
             txn_cnt += client.DoTransaction();
-            ProgressUpdate(
-               pmode, total_ops, global_op_counter, i, last_printed);
+            ProgressUpdate(input->pmode,
+                           input->total_ops,
+                           input->global_op_counter,
+                           i,
+                           input->last_printed);
          }
-         ProgressFinish(
-            pmode, total_ops, global_op_counter, num_ops, last_printed);
+         ProgressFinish(input->pmode,
+                        input->total_ops,
+                        input->global_op_counter,
+                        input->num_ops,
+                        input->last_printed);
       }
    }
-   db->Close();
+   input->db->Close();
 
-   if (stats) {
-      stats->txn_cnt              = txn_cnt;
-      stats->commit_cnt           = client.GetTxnCnt();
-      stats->abort_cnt            = client.GetAbortCnt();
-      stats->commit_txn_latencies = client.GetCommitTxnLatnecies();
-      stats->abort_txn_latencies  = client.GetAbortTxnLatnecies();
+   if (output) {
+      output->txn_cnt              = txn_cnt;
+      output->commit_cnt           = client.GetTxnCnt();
+      output->abort_cnt            = client.GetAbortCnt();
+      output->commit_txn_latencies = client.GetCommitTxnLatnecies();
+      output->abort_txn_latencies  = client.GetAbortTxnLatnecies();
    }
 }
 
@@ -387,7 +446,8 @@ main(const int argc, const char *argv[])
       // Perform the Load phase
       if (!load_workload.preloaded) {
          std::vector<std::thread> load_threads;
-         YCSBStats                stats[num_threads];
+         YCSBInput                ycsb_inputs[num_threads];
+         YCSBOutput               ycsb_outputs[num_threads];
 
          timer.Start();
          {
@@ -397,20 +457,22 @@ main(const int argc, const char *argv[])
             for (thr_i = 0; thr_i < num_threads; ++thr_i) {
                uint64_t start_op = (record_count * thr_i) / num_threads;
                uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
+               ycsb_inputs[thr_i].db                = db;
+               ycsb_inputs[thr_i].wl                = &wls[thr_i];
+               ycsb_inputs[thr_i].num_ops           = end_op - start_op;
+               ycsb_inputs[thr_i].is_loading        = true;
+               ycsb_inputs[thr_i].pmode             = pmode;
+               ycsb_inputs[thr_i].total_ops         = record_count;
+               ycsb_inputs[thr_i].global_op_counter = &load_progress;
+               ycsb_inputs[thr_i].last_printed      = &last_printed;
+
                load_threads.emplace_back(
                   std::thread(props.GetProperty("client") == "txn"
                                  ? DelegateClient<ycsbc::TxnClient>
                                  : DelegateClient<ycsbc::Client>,
                               thr_i,
-                              db,
-                              &wls[thr_i],
-                              end_op - start_op,
-                              true,
-                              pmode,
-                              record_count,
-                              &load_progress,
-                              &last_printed,
-                              &stats[thr_i]));
+                              &ycsb_inputs[thr_i],
+                              &ycsb_outputs[thr_i]));
                bind_to_cpu(load_threads, thr_i);
             }
             for (auto &t : load_threads) {
@@ -423,7 +485,7 @@ main(const int argc, const char *argv[])
          }
          total_txn_count = 0;
          for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-            total_txn_count += stats[thr_i].txn_cnt;
+            total_txn_count += ycsb_outputs[thr_i].txn_cnt;
          }
          cout << "# Load throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << load_workload.filename << '\t'
@@ -464,9 +526,12 @@ main(const int argc, const char *argv[])
                ? max_txn_count * num_run_threads * ops_per_transactions
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-         uint64_t  run_progress = 0;
-         uint64_t  last_printed = 0;
-         YCSBStats stats[num_run_threads];
+         uint64_t              run_progress = 0;
+         uint64_t              last_printed = 0;
+         YCSBInput             ycsb_inputs[num_run_threads];
+         YCSBOutput            ycsb_outputs[num_run_threads];
+         std::atomic<uint64_t> num_clients_done(0);
+
          timer.Start();
          {
             for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
@@ -474,20 +539,26 @@ main(const int argc, const char *argv[])
                uint64_t end_op   = (total_ops * (thr_i + 1)) / num_run_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
+               ycsb_inputs[thr_i].db                = db;
+               ycsb_inputs[thr_i].wl                = &wls[thr_i];
+               ycsb_inputs[thr_i].num_ops           = num_transactions;
+               ycsb_inputs[thr_i].is_loading        = false;
+               ycsb_inputs[thr_i].pmode             = pmode;
+               ycsb_inputs[thr_i].total_ops         = total_ops;
+               ycsb_inputs[thr_i].global_op_counter = &run_progress;
+               ycsb_inputs[thr_i].last_printed      = &last_printed;
+               ycsb_inputs[thr_i].benchmark_seconds =
+                  stof(props.GetProperty("benchmark_seconds", "0"));
+               ycsb_inputs[thr_i].global_num_clients_done = &num_clients_done;
+               ycsb_inputs[thr_i].total_num_clients       = num_run_threads;
+
                run_threads.emplace_back(
                   std::thread(props.GetProperty("client") == "txn"
                                  ? DelegateClient<ycsbc::TxnClient>
                                  : DelegateClient<ycsbc::Client>,
                               thr_i,
-                              db,
-                              &wls[thr_i],
-                              num_transactions,
-                              false,
-                              pmode,
-                              total_ops,
-                              &run_progress,
-                              &last_printed,
-                              &stats[thr_i]));
+                              &ycsb_inputs[thr_i],
+                              &ycsb_outputs[thr_i]));
 
                bind_to_cpu(run_threads, thr_i);
             }
@@ -510,11 +581,11 @@ main(const int argc, const char *argv[])
          uint64_t total_abort_cnt  = 0;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             cout << "[Client " << thr_i
-                 << "] txn_cnt: " << stats[thr_i].commit_cnt
-                 << ", abort_cnt: " << stats[thr_i].abort_cnt << endl;
-            total_txn_count += stats[thr_i].txn_cnt;
-            total_commit_cnt += stats[thr_i].commit_cnt;
-            total_abort_cnt += stats[thr_i].abort_cnt;
+                 << "] txn_cnt: " << ycsb_outputs[thr_i].commit_cnt
+                 << ", abort_cnt: " << ycsb_outputs[thr_i].abort_cnt << endl;
+            total_txn_count += ycsb_outputs[thr_i].txn_cnt;
+            total_commit_cnt += ycsb_outputs[thr_i].commit_cnt;
+            total_abort_cnt += ycsb_outputs[thr_i].abort_cnt;
          }
          cout << "# Transaction count:\t" << total_txn_count << endl;
          cout << "# Transaction throughput (KTPS)" << endl;
@@ -534,12 +605,12 @@ main(const int argc, const char *argv[])
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             total_commit_txn_latencies.insert(
                total_commit_txn_latencies.end(),
-               stats[thr_i].commit_txn_latencies.begin(),
-               stats[thr_i].commit_txn_latencies.end());
+               ycsb_outputs[thr_i].commit_txn_latencies.begin(),
+               ycsb_outputs[thr_i].commit_txn_latencies.end());
             total_abort_txn_latencies.insert(
                total_abort_txn_latencies.end(),
-               stats[thr_i].abort_txn_latencies.begin(),
-               stats[thr_i].abort_txn_latencies.end());
+               ycsb_outputs[thr_i].abort_txn_latencies.begin(),
+               ycsb_outputs[thr_i].abort_txn_latencies.end());
          }
 
          std::sort(total_commit_txn_latencies.begin(),
@@ -547,71 +618,32 @@ main(const int argc, const char *argv[])
          std::sort(total_abort_txn_latencies.begin(),
                    total_abort_txn_latencies.end());
 
+         auto print_latency_statistics = [](std::vector<double> &latencies,
+                                            std::ostream &out = std::cout) {
+            if (latencies.empty()) {
+               return;
+            }
+
+            out << "Min: " << latencies.front() << std::endl;
+            out << "Max: " << latencies.back() << std::endl;
+            out << "Avg: "
+                << std::accumulate(latencies.begin(), latencies.end(), 0.0)
+                      / latencies.size()
+                << std::endl;
+            out << "P50: " << latencies[latencies.size() / 2] << std::endl;
+            out << "P90: " << latencies[latencies.size() * 9 / 10] << std::endl;
+            out << "P95: " << latencies[latencies.size() * 95 / 100]
+                << std::endl;
+            out << "P99: " << latencies[latencies.size() * 99 / 100]
+                << std::endl;
+            out << "P99.9: " << latencies[latencies.size() * 999 / 1000]
+                << std::endl;
+         };
+
          std::cout << "# Commit Latencies (us)" << std::endl;
-         std::cout << "Min: " << total_commit_txn_latencies.front()
-                   << std::endl;
-         std::cout << "Max: " << total_commit_txn_latencies.back() << std::endl;
-         std::cout << "Avg: "
-                   << std::accumulate(total_commit_txn_latencies.begin(),
-                                      total_commit_txn_latencies.end(),
-                                      0.0)
-                         / total_commit_txn_latencies.size()
-                   << std::endl;
-         std::cout
-            << "P50: "
-            << total_commit_txn_latencies[total_commit_txn_latencies.size() / 2]
-            << std::endl;
-         std::cout
-            << "P90: "
-            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 9
-                                          / 10]
-            << std::endl;
-         std::cout
-            << "P95: "
-            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 95
-                                          / 100]
-            << std::endl;
-         std::cout
-            << "P99: "
-            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 99
-                                          / 100]
-            << std::endl;
-         std::cout
-            << "P99.9: "
-            << total_commit_txn_latencies[total_commit_txn_latencies.size()
-                                          * 999 / 1000]
-            << std::endl;
-
+         print_latency_statistics(total_commit_txn_latencies);
          std::cout << "# Abort Latencies (us)" << std::endl;
-         std::cout << "Min: " << total_abort_txn_latencies.front() << std::endl;
-         std::cout << "Max: " << total_abort_txn_latencies.back() << std::endl;
-         std::cout << "Avg: "
-                   << std::accumulate(total_abort_txn_latencies.begin(),
-                                      total_abort_txn_latencies.end(),
-                                      0.0)
-                         / total_abort_txn_latencies.size()
-                   << std::endl;
-         std::cout
-            << "P50: "
-            << total_abort_txn_latencies[total_abort_txn_latencies.size() / 2]
-            << std::endl;
-         std::cout << "P90: "
-                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
-                                                * 9 / 10]
-                   << std::endl;
-         std::cout << "P95: "
-                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
-                                                * 95 / 100]
-                   << std::endl;
-         std::cout << "P99: "
-                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
-                                                * 99 / 100]
-                   << std::endl;
-         std::cout << "P99.9: "
-                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
-                                                * 999 / 1000]
-                   << std::endl;
-
+         print_latency_statistics(total_abort_txn_latencies);
 
          db->PrintDBStats();
       }
@@ -707,6 +739,14 @@ ParseCommandLine(int                         argc,
             exit(0);
          }
          props.SetProperty("client", argv[argindex]);
+         argindex++;
+      } else if (strcmp(argv[argindex], "-benchmark_seconds") == 0) {
+         argindex++;
+         if (argindex >= argc) {
+            UsageMessage(argv[0]);
+            exit(0);
+         }
+         props.SetProperty("benchmark_seconds", argv[argindex]);
          argindex++;
       } else if (strcmp(argv[argindex], "-W") == 0
                  || strcmp(argv[argindex], "-P") == 0
