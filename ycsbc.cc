@@ -142,6 +142,17 @@ ProgressFinish(progress_mode      pmode,
       pmode, total_ops, global_op_counter, i % sync_interval, last_printed);
 }
 
+class YCSBStats {
+public:
+   uint64_t            commit_cnt;
+   uint64_t            abort_cnt;
+   uint64_t            txn_cnt;
+   std::vector<double> commit_txn_latencies;
+   std::vector<double> abort_txn_latencies;
+
+   YCSBStats() : commit_cnt(0), abort_cnt(0), txn_cnt(0){};
+};
+
 template<class Client = ycsbc::Client>
 void
 DelegateClient(int                  id,
@@ -153,9 +164,7 @@ DelegateClient(int                  id,
                uint64_t             total_ops,
                volatile uint64_t   *global_op_counter,
                volatile uint64_t   *last_printed,
-               uint64_t            *commit_cnt,
-               uint64_t            *abort_cnt,
-               uint64_t            *txn_cnt)
+               YCSBStats           *stats)
 {
    // Hoping this atomic shared variable is not bottlenecked.
    // static std::atomic<bool> run_bench;
@@ -163,25 +172,27 @@ DelegateClient(int                  id,
    db->Init();
    Client client(id, *db, *wl);
 
+   uint64_t txn_cnt = 0;
+
    if (is_loading) {
       for (uint64_t i = 0; i < num_ops; ++i) {
-         *txn_cnt += client.DoInsert();
+         txn_cnt += client.DoInsert();
          ProgressUpdate(pmode, total_ops, global_op_counter, i, last_printed);
       }
    } else {
       if (wl->max_txn_count() > 0) {
          // while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
-         while (*txn_cnt < wl->max_txn_count()) {
-            *txn_cnt += client.DoTransaction();
+         while (txn_cnt < wl->max_txn_count()) {
+            txn_cnt += client.DoTransaction();
             ProgressUpdate(
-               pmode, total_ops, global_op_counter, *txn_cnt, last_printed);
+               pmode, total_ops, global_op_counter, txn_cnt, last_printed);
          }
          ProgressFinish(
-            pmode, total_ops, global_op_counter, *txn_cnt, last_printed);
+            pmode, total_ops, global_op_counter, txn_cnt, last_printed);
          // run_bench.store(false);
       } else {
          for (uint64_t i = 0; i < num_ops; ++i) {
-            *txn_cnt += client.DoTransaction();
+            txn_cnt += client.DoTransaction();
             ProgressUpdate(
                pmode, total_ops, global_op_counter, i, last_printed);
          }
@@ -191,12 +202,12 @@ DelegateClient(int                  id,
    }
    db->Close();
 
-   if (commit_cnt) {
-      *commit_cnt = client.GetTxnCnt();
-   }
-
-   if (abort_cnt) {
-      *abort_cnt = client.GetAbortCnt();
+   if (stats) {
+      stats->txn_cnt              = txn_cnt;
+      stats->commit_cnt           = client.GetTxnCnt();
+      stats->abort_cnt            = client.GetAbortCnt();
+      stats->commit_txn_latencies = client.GetCommitTxnLatnecies();
+      stats->abort_txn_latencies  = client.GetAbortTxnLatnecies();
    }
 }
 
@@ -376,7 +387,7 @@ main(const int argc, const char *argv[])
       // Perform the Load phase
       if (!load_workload.preloaded) {
          std::vector<std::thread> load_threads;
-         std::vector<uint64_t>    txn_cnts(num_threads, 0);
+         YCSBStats                stats[num_threads];
 
          timer.Start();
          {
@@ -399,9 +410,7 @@ main(const int argc, const char *argv[])
                               record_count,
                               &load_progress,
                               &last_printed,
-                              nullptr,
-                              nullptr,
-                              &txn_cnts[thr_i]));
+                              &stats[thr_i]));
                bind_to_cpu(load_threads, thr_i);
             }
             for (auto &t : load_threads) {
@@ -412,7 +421,10 @@ main(const int argc, const char *argv[])
          if (pmode != no_progress) {
             cout << "\n";
          }
-         total_txn_count = std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
+         total_txn_count = 0;
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+            total_txn_count += stats[thr_i].txn_cnt;
+         }
          cout << "# Load throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << load_workload.filename << '\t'
               << num_threads << '\t';
@@ -452,12 +464,9 @@ main(const int argc, const char *argv[])
                ? max_txn_count * num_run_threads * ops_per_transactions
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
-         uint64_t              run_progress = 0;
-         uint64_t              last_printed = 0;
-         std::vector<uint64_t> commit_cnts(num_run_threads, 0);
-         std::vector<uint64_t> abort_cnts(num_run_threads, 0);
-         std::vector<uint64_t> txn_cnts(num_run_threads, 0);
-
+         uint64_t  run_progress = 0;
+         uint64_t  last_printed = 0;
+         YCSBStats stats[num_run_threads];
          timer.Start();
          {
             for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
@@ -478,9 +487,7 @@ main(const int argc, const char *argv[])
                               total_ops,
                               &run_progress,
                               &last_printed,
-                              &commit_cnts[thr_i],
-                              &abort_cnts[thr_i],
-                              &txn_cnts[thr_i]));
+                              &stats[thr_i]));
 
                bind_to_cpu(run_threads, thr_i);
             }
@@ -498,27 +505,113 @@ main(const int argc, const char *argv[])
             wls[thr_i].DeinitRunWorkload();
          }
 
-         total_txn_count = std::accumulate(txn_cnts.begin(), txn_cnts.end(), 0);
-         cout << "# Transaction count:\t" << total_txn_count << endl;
+         total_txn_count           = 0;
+         uint64_t total_commit_cnt = 0;
+         uint64_t total_abort_cnt  = 0;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
-            cout << "[Client " << thr_i << "] txn_cnt: " << commit_cnts[thr_i]
-                 << ", abort_cnt: " << abort_cnts[thr_i] << endl;
+            cout << "[Client " << thr_i
+                 << "] txn_cnt: " << stats[thr_i].commit_cnt
+                 << ", abort_cnt: " << stats[thr_i].abort_cnt << endl;
+            total_txn_count += stats[thr_i].txn_cnt;
+            total_commit_cnt += stats[thr_i].commit_cnt;
+            total_abort_cnt += stats[thr_i].abort_cnt;
          }
-
-         const uint64_t total_commit_cnt =
-            std::accumulate(commit_cnts.begin(), commit_cnts.end(), 0);
+         cout << "# Transaction count:\t" << total_txn_count << endl;
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
               << num_run_threads << '\t';
          cout << total_commit_cnt / run_duration / 1000 << endl;
          cout << "Run duration (sec):\t" << run_duration << endl;
-
-         const uint64_t total_abort_cnt =
-            std::accumulate(abort_cnts.begin(), abort_cnts.end(), 0);
          cout << "# Abort count:\t" << total_abort_cnt << '\n';
          cout << "Abort rate:\t"
               << (double)total_abort_cnt / (total_abort_cnt + total_commit_cnt)
               << "\n";
+         /*
+          * Print Latencies
+          */
+         std::vector<double> total_commit_txn_latencies;
+         std::vector<double> total_abort_txn_latencies;
+         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+            total_commit_txn_latencies.insert(
+               total_commit_txn_latencies.end(),
+               stats[thr_i].commit_txn_latencies.begin(),
+               stats[thr_i].commit_txn_latencies.end());
+            total_abort_txn_latencies.insert(
+               total_abort_txn_latencies.end(),
+               stats[thr_i].abort_txn_latencies.begin(),
+               stats[thr_i].abort_txn_latencies.end());
+         }
+
+         std::sort(total_commit_txn_latencies.begin(),
+                   total_commit_txn_latencies.end());
+         std::sort(total_abort_txn_latencies.begin(),
+                   total_abort_txn_latencies.end());
+
+         std::cout << "# Commit Latencies (us)" << std::endl;
+         std::cout << "Min: " << total_commit_txn_latencies.front()
+                   << std::endl;
+         std::cout << "Max: " << total_commit_txn_latencies.back() << std::endl;
+         std::cout << "Avg: "
+                   << std::accumulate(total_commit_txn_latencies.begin(),
+                                      total_commit_txn_latencies.end(),
+                                      0.0)
+                         / total_commit_txn_latencies.size()
+                   << std::endl;
+         std::cout
+            << "P50: "
+            << total_commit_txn_latencies[total_commit_txn_latencies.size() / 2]
+            << std::endl;
+         std::cout
+            << "P90: "
+            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 9
+                                          / 10]
+            << std::endl;
+         std::cout
+            << "P95: "
+            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 95
+                                          / 100]
+            << std::endl;
+         std::cout
+            << "P99: "
+            << total_commit_txn_latencies[total_commit_txn_latencies.size() * 99
+                                          / 100]
+            << std::endl;
+         std::cout
+            << "P99.9: "
+            << total_commit_txn_latencies[total_commit_txn_latencies.size()
+                                          * 999 / 1000]
+            << std::endl;
+
+         std::cout << "# Abort Latencies (us)" << std::endl;
+         std::cout << "Min: " << total_abort_txn_latencies.front() << std::endl;
+         std::cout << "Max: " << total_abort_txn_latencies.back() << std::endl;
+         std::cout << "Avg: "
+                   << std::accumulate(total_abort_txn_latencies.begin(),
+                                      total_abort_txn_latencies.end(),
+                                      0.0)
+                         / total_abort_txn_latencies.size()
+                   << std::endl;
+         std::cout
+            << "P50: "
+            << total_abort_txn_latencies[total_abort_txn_latencies.size() / 2]
+            << std::endl;
+         std::cout << "P90: "
+                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
+                                                * 9 / 10]
+                   << std::endl;
+         std::cout << "P95: "
+                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
+                                                * 95 / 100]
+                   << std::endl;
+         std::cout << "P99: "
+                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
+                                                * 99 / 100]
+                   << std::endl;
+         std::cout << "P99.9: "
+                   << total_abort_txn_latencies[total_abort_txn_latencies.size()
+                                                * 999 / 1000]
+                   << std::endl;
+
 
          db->PrintDBStats();
       }

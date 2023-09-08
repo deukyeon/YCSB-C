@@ -19,6 +19,7 @@
 #include <string>
 #include <thread>
 #include <unordered_set>
+#include "timer.h"
 
 namespace ycsbc {
 
@@ -86,6 +87,16 @@ public:
    {
       return abort_cnt;
    }
+   const std::vector<double> &
+   GetCommitTxnLatnecies() const
+   {
+      return commit_txn_latencies;
+   }
+   const std::vector<double> &
+   GetAbortTxnLatnecies() const
+   {
+      return abort_txn_latencies;
+   }
 
 protected:
    virtual bool
@@ -129,6 +140,10 @@ protected:
    unsigned long                       abort_cnt;
    unsigned long                       txn_cnt;
    drand48_data                        drand_buffer;
+
+   utils::Timer<double> timer;
+   std::vector<double>  commit_txn_latencies;
+   std::vector<double>  abort_txn_latencies;
 };
 
 inline bool
@@ -240,6 +255,7 @@ Client::GenerateClientTransactionalOperations()
 inline bool
 Client::DoTransactionalOperations()
 {
+   timer.Start();
    GenerateClientTransactionalOperations();
 
    bool is_abort = false;
@@ -291,6 +307,14 @@ Client::DoTransactionalOperations()
          ++retry;
       }
    } while (is_abort && retry <= workload_.max_txn_retry());
+
+   double latency_sec = timer.End();
+   double latency_us  = latency_sec * 1000000;
+   if (is_abort) {
+      abort_txn_latencies.push_back(latency_us);
+   } else {
+      commit_txn_latencies.push_back(latency_us);
+   }
 
    operations_in_transaction.clear();
 
