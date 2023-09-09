@@ -17,7 +17,7 @@ available_workloads = [
 
 
 def printHelp():
-    print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p -b -c [cache_size_mb] -h", file=sys.stderr)
+    print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p -b -c [cache_size_mb] -r [run_seconds] -h", file=sys.stderr)
     print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
     print("\t-w,--workload [workload]: Choose one of the followings --",
@@ -27,6 +27,7 @@ def printHelp():
     print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
     print("\t-b,--bgthreads: Enable background threads", file=sys.stderr)
     print("\t-c,--cachesize: Set the cache size in MB (default: 4096)", file=sys.stderr)
+    print("\t-r,--run_seconds: Set the run time in seconds (default: 0, which means disabled)", file=sys.stderr)
     print("\t-h,--help: Print this help message", file=sys.stderr)
     exit(1)
 
@@ -59,6 +60,24 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
     # load_data = False
     run_data = False
 
+    commit_latency_data = False
+    abort_latency_data = False
+
+    latency_data_keys = [
+        'Min',
+        'Max',
+        'Avg',
+        'P50',
+        'P90',
+        'P95',
+        'P99',
+        'P99.9']
+    commit_latencies = {}
+    abort_latencies = {}
+    for key in latency_data_keys:
+        commit_latencies[key] = []
+        abort_latencies[key] = []
+
     for line in lines:
         # if load_data:
         #     fields = line.split()
@@ -69,14 +88,15 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
         # if line.startswith("# Load throughput (KTPS)"):
         #     load_data = True
 
+        if line.startswith("# Transaction throughput (KTPS)"):
+            run_data = True
+            continue
+
         if run_data:
             fields = line.split()
             run_threads.append(fields[-2])
             run_tputs.append(fields[-1])
             run_data = False
-
-        if line.startswith("# Transaction throughput (KTPS)"):
-            run_data = True
 
         if line.startswith("# Abort count"):
             fields = line.split()
@@ -86,10 +106,52 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             fields = line.split()
             abort_rates.append(fields[-1])
 
+
+        if line.startswith("# Commit Latencies"):
+            commit_latency_data = True
+            continue
+
+        if line.startswith("# Abort Latencies"):
+            abort_latency_data = True
+            no_abort_latency_data = True
+            continue
+            
+        if commit_latency_data:
+            fields = line.split(sep=':')
+            if fields[0] not in latency_data_keys:
+                commit_latency_data = False
+                continue
+            commit_latencies[fields[0]].append(fields[1].strip())
+            if fields[0] == latency_data_keys[-1]:
+                commit_latency_data = False
+            
+        if abort_latency_data:
+            fields = line.split(sep=':')
+            if fields[0] not in latency_data_keys:
+                if no_abort_latency_data:
+                    for key in latency_data_keys:
+                        abort_latencies[key].append('0')
+                abort_latency_data = False
+                continue
+            abort_latencies[fields[0]].append(fields[1].strip())
+            no_abort_latency_data = False
+            if fields[0] == latency_data_keys[-1]:
+                abort_latency_data = False
+
     # print csv
     # for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates):
-    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, commit_latencies['Min'], commit_latencies['Max'], commit_latencies['Avg'], commit_latencies['P50'], commit_latencies['P90'], commit_latencies['P95'], commit_latencies['P99'], commit_latencies['P99.9'], abort_latencies['Min'], abort_latencies['Max'], abort_latencies['Avg'], abort_latencies['P50'], abort_latencies['P90'], abort_latencies['P95'], abort_latencies['P99'], abort_latencies['P99.9']):
         print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
+
+
+def generateOutputFile(input, output=sys.stdout):
+    import pandas as pd
+    import numpy as np
+    df = pd.read_csv(input)
+    df = df.select_dtypes(include=np.number)
+    df = df.groupby(by='threads').agg('mean')
+    df.drop('seq', axis=1, inplace=True)
+    print(df.to_string(), file=output)
 
 
 def main(argc, argv):
@@ -97,9 +159,10 @@ def main(argc, argv):
     force_to_run = False
     enable_bgthreads = False
     cache_size_mb = 4096
+    run_seconds = 0
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pfbc:h', 
-                            ['system=', 'workload=', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'help'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:d:pfbc:r:h', 
+                            ['system=', 'workload=', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'run_seconds=', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
@@ -126,6 +189,8 @@ def main(argc, argv):
             enable_bgthreads = True
         elif opt in ('-c', '--cachesize'):
             cache_size_mb = int(arg)
+        elif opt in ('-r', '--run_seconds'):
+            run_seconds = float(arg)
         elif opt in ('-h', '--help'):
             printHelp()
 
@@ -135,12 +200,15 @@ def main(argc, argv):
     label = system + '-' + conf
     csv_path = f'{label}.csv'
     csv = open(csv_path, 'w')
-    print("system,conf,threads,goodput,aborts,abort_rate,seq", file=csv)
+    print("system,conf,threads,goodput,aborts,abort_rate,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
     num_repeats = 2
     if parse_result_only:
         for i in range(0, num_repeats):
             log_path = f'/tmp/{label}.{i}.log'
             parseLogfile(log_path, csv, system, conf, i)
+        csv.close()
+        with open(f'{label}-result.csv', 'w') as out:
+            generateOutputFile(csv_path, out)
         return
 
     ExpSystem.build(system, '../splinterdb')
@@ -172,7 +240,7 @@ def main(argc, argv):
             num_memtable_bg_threads = 0
 
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so \
-            ./ycsbc -db {db} -threads {thread} -client txn \
+            ./ycsbc -db {db} -threads {thread} -benchmark_seconds {run_seconds} -client txn \
             -P {spec_file} -W {spec_file} \
             -p splinterdb.filename {dev_name} \
             -p splinterdb.cache_size_mb {cache_size_mb} \
@@ -210,7 +278,8 @@ def main(argc, argv):
         log_path = f'/tmp/{label}.{i}.log'
         parseLogfile(log_path, csv, system, conf, i)
     csv.close()
-
+    with open(f'{label}-result.csv', 'w') as out:
+        generateOutputFile(csv_path, out)
 
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)

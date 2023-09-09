@@ -37,6 +37,7 @@ def run_shell_command(cmd, parse=True, shell=False):
     return out, err
 
 def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
+    print(logfile_path)
     f = open(logfile_path, "r")
     lines = f.readlines()
     f.close()
@@ -48,16 +49,35 @@ def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
     abort_rates = []
 
     run_data = False
+    
+    commit_latency_data = False
+    abort_latency_data = False
+
+    latency_data_keys = [
+        'Min',
+        'Max',
+        'Avg',
+        'P50',
+        'P90',
+        'P95',
+        'P99',
+        'P99.9']
+    commit_latencies = {}
+    abort_latencies = {}
+    for key in latency_data_keys:
+        commit_latencies[key] = []
+        abort_latencies[key] = []
 
     for line in lines:
+        if line.startswith("# Transaction throughput (KTPS)"):
+            run_data = True
+            continue
+
         if run_data:
             fields = line.split()
             run_threads.append(fields[-2])
             run_tputs.append(fields[-1])
             run_data = False
-
-        if line.startswith("# Transaction goodput (KTPS)"):
-            run_data = True
 
         if line.startswith("# Abort count"):
             fields = line.split()
@@ -66,10 +86,51 @@ def parseLogfile(logfile_path, csv, system, conf, seq, num_wh):
         if line.startswith("Abort rate"):
             fields = line.split()
             abort_rates.append(fields[-1])
+            
+        if line.startswith("# Commit Latencies"):
+            commit_latency_data = True
+            continue
+
+        if line.startswith("# Abort Latencies"):
+            abort_latency_data = True
+            no_abort_latency_data = True
+            continue
+            
+        if commit_latency_data:
+            fields = line.split(sep=':')
+            if fields[0] not in latency_data_keys:
+                commit_latency_data = False
+                continue
+            commit_latencies[fields[0]].append(fields[1].strip())
+            if fields[0] == latency_data_keys[-1]:
+                commit_latency_data = False
+            
+        if abort_latency_data:
+            fields = line.split(sep=':')
+            if fields[0] not in latency_data_keys:
+                if no_abort_latency_data:
+                    for key in latency_data_keys:
+                        abort_latencies[key].append('0')
+                abort_latency_data = False
+                continue
+            abort_latencies[fields[0]].append(fields[1].strip())
+            no_abort_latency_data = False
+            if fields[0] == latency_data_keys[-1]:
+                abort_latency_data = False
 
     # print csv
-    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, commit_latencies['Min'], commit_latencies['Max'], commit_latencies['Avg'], commit_latencies['P50'], commit_latencies['P90'], commit_latencies['P95'], commit_latencies['P99'], commit_latencies['P99.9'], abort_latencies['Min'], abort_latencies['Max'], abort_latencies['Avg'], abort_latencies['P50'], abort_latencies['P90'], abort_latencies['P95'], abort_latencies['P99'], abort_latencies['P99.9']):
         print(system, conf, num_wh, ','.join(tuple), seq, sep=',', file=csv)
+
+
+def generateOutputFile(input, output=sys.stdout):
+    import pandas as pd
+    import numpy as np
+    df = pd.read_csv(input)
+    df = df.select_dtypes(include=np.number)
+    df = df.groupby(by=['threads', 'num_wh']).agg('mean')
+    df.drop('seq', axis=1, inplace=True)
+    print(df.to_string(), file=output)
 
 
 def change_num_warehouses(num_wh):
@@ -89,7 +150,7 @@ def main(argc, argv):
     parse_result_only = False
     force_to_run = False
     enable_bgthreads = False
-    cache_size_mb = 128
+    cache_size_mb = 256
 
     for opt, arg in opts:
         if opt in ('-s', '--system'):
@@ -115,17 +176,21 @@ def main(argc, argv):
         elif opt in ('-h', '--help'):
             printHelp()
 
-    num_repeats = 5
+    num_repeats = 2
     num_warehouses = [4, 8, 32]
 
     label = system + '-' + conf
-    csv = open(f'{label}.csv', 'w')
-    print("system,conf,num_wh,threads,goodput,aborts,abort_rate,seq", file=csv)
+    csv_path = f'{label}.csv'
+    csv = open(csv_path, 'w')
+    print("system,conf,num_wh,threads,goodput,aborts,abort_rate,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
     if parse_result_only:
         for i in range(0, num_repeats):
             for wh in num_warehouses:
                 log_path = f'/tmp/{label}-wh{wh}.{i}.log'
                 parseLogfile(log_path, csv, system, conf, i, wh)
+        csv.close()
+        with open(f'{label}-result.csv', 'w') as out:
+            generateOutputFile(csv_path, out)
         return
 
     ExpSystem.build(system, '../splinterdb')
@@ -185,6 +250,8 @@ def main(argc, argv):
             log_path = f'/tmp/{label}-wh{wh}.{i}.log'
             parseLogfile(log_path, csv, system, conf, i, wh)
     csv.close()
+    with open(f'{label}-result.csv', 'w') as out:
+        generateOutputFile(csv_path, out)
 
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)

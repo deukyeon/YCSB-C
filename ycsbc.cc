@@ -414,7 +414,7 @@ main(const int argc, const char *argv[])
          total_attempts_new_order += _tpcc_stats[i].attempts_new_order;
       }
 
-      cout << "# Transaction goodput (KTPS)" << endl;
+      cout << "# Transaction throughput (KTPS)" << endl;
       cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
            << num_threads << '\t';
       cout << total_committed_cnt / run_duration / 1000 << endl;

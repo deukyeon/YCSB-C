@@ -16,7 +16,7 @@ try:
         df = df.select_dtypes(include=np.number)
         df = df.groupby(by=groupby_key[bench]).agg('mean')
         df.drop('seq', axis=1, inplace=True)
-        print(df)
+        print(df.to_string())
 except Exception as e:
     print(e)
     print(f'Usage: python {sys.argv[0]} csvfile ycsb/tpcc')
