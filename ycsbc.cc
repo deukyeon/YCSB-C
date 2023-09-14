@@ -14,6 +14,7 @@
 #include "core/numautils.h"
 #include "db/db_factory.h"
 #include "core/tpcc_workload.h"
+#include "retwis/client.h"
 #include <cstring>
 #include <future>
 #include <iostream>
@@ -469,6 +470,87 @@ main(const int argc, const char *argv[])
       PrintLatencyStatistics(total_abort_txn_latencies);
 
       db->PrintDBStats();
+   } else if (props.GetProperty("benchmark") == "retwis") {
+      db = new ycsbc::TransactionalSplinterDB(props, load_workload.preloaded);
+
+      std::vector<std::thread> retwis_threads;
+
+      auto DelegateRetwisClientInit =
+         [](int thread_num, ycsbc::DB *db, int num_threads) {
+            db->Init();
+
+            retwis::Client client(db, thread_num, num_threads);
+            client.init();
+
+            db->Close();
+         };
+
+      std::cout << "Retwis Init start\n";
+      timer.Start();
+      for (unsigned int i = 0; i < num_threads; ++i) {
+         retwis_threads.emplace_back(
+            std::thread(DelegateRetwisClientInit, i, db, num_threads));
+         bind_to_cpu(retwis_threads, i);
+      }
+      for (auto &t : retwis_threads) {
+         t.join();
+      }
+      double init_duration = timer.End();
+
+      std::cout << "Retwis Init finished (" << init_duration << " s) Run transactions\n";
+
+      retwis::ClientOutput output[num_threads];
+
+      auto DelegateRetwisClientRun =
+         [&output](int thread_num, ycsbc::DB *db, int num_threads) {
+            db->Init();
+
+            retwis::Client client(db, thread_num, num_threads);
+            client.run_transactions();
+            output[thread_num] = client.get_output();
+
+            db->Close();
+         };
+
+      retwis_threads.clear();
+
+      timer.Start();
+      {
+         for (unsigned int i = 0; i < num_threads; ++i) {
+            retwis_threads.emplace_back(
+               std::thread(DelegateRetwisClientRun, i, db, num_threads));
+            bind_to_cpu(retwis_threads, i);
+         }
+         for (auto &t : retwis_threads) {
+            t.join();
+         }
+      }
+      double run_duration = timer.End();
+      if (pmode != no_progress) {
+         cout << "\n";
+      }
+
+      uint64_t total_committed_cnt = 0;
+      uint64_t total_aborted_cnt   = 0;
+
+      for (unsigned int i = 0; i < num_threads; ++i) {
+         cout << "[Client " << i << "] txn_cnt: " << output[i].commit_cnt
+              << ", abort_cnt: " << output[i].abort_cnt << endl;
+         total_committed_cnt += output[i].commit_cnt;
+         total_aborted_cnt += output[i].abort_cnt;
+      }
+
+      cout << "# Transaction throughput (KTPS)" << endl;
+      cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
+           << num_threads << '\t';
+      cout << total_committed_cnt / run_duration / 1000 << endl;
+      cout << "Run duration (sec):\t" << run_duration << endl;
+
+      cout << "# Abort count:\t" << total_aborted_cnt << '\n';
+      cout << "Abort rate:\t"
+           << (double)total_aborted_cnt
+                 / (total_aborted_cnt + total_committed_cnt)
+           << "\n";
    } else {
       db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
       if (!db) {

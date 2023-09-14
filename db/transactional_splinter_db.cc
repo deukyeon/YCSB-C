@@ -132,11 +132,15 @@ TransactionalSplinterDB::Read(Transaction          *txn,
    if (transactional_splinterdb_lookup(
           spl, txn_handle, key_slice, &lookup_result)
        != 0)
+   {
+      splinterdb_lookup_result_deinit(&lookup_result);
       return DB::kErrorConflict;
-   // if (!splinterdb_lookup_found(&lookup_result)) {
-   //    cout << "FAILED lookup " << key << endl;
-   //    assert(0);
-   // }
+   }
+
+   if (!splinterdb_lookup_found(&lookup_result)) {
+      splinterdb_lookup_result_deinit(&lookup_result);
+      return DB::kErrorNoData;
+   }
    // cout << "done lookup " << key << endl;
 
    // slice value;
@@ -387,7 +391,15 @@ TransactionalSplinterDB::Read(Transaction *txn,
    if (transactional_splinterdb_lookup(
           spl, txn_handle, key_slice, &lookup_result)
        != 0)
+   {
+      splinterdb_lookup_result_deinit(&lookup_result);
       return DB::kErrorConflict;
+   }
+
+   if (!splinterdb_lookup_found(&lookup_result)) {
+      splinterdb_lookup_result_deinit(&lookup_result);
+      return DB::kErrorNoData;
+   }
 
    // assert(!transactional_splinterdb_lookup(
    //    spl, txn_handle, key_slice, &lookup_result));
