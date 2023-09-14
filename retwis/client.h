@@ -5,6 +5,8 @@
 #include "../core/discrete_generator.h"
 #include "transaction.h"
 
+#include <map>
+
 namespace retwis {
 
 struct ClientOutput {
@@ -12,7 +14,27 @@ struct ClientOutput {
    uint64_t commit_cnt;
    uint64_t abort_cnt;
 
-   ClientOutput() : txn_cnt(0), commit_cnt(0), abort_cnt(0) {}
+   std::map<Transaction::Type, uint64_t> txn_cnt_by_type;
+   std::map<Transaction::Type, uint64_t> commit_cnt_by_type;
+   std::map<Transaction::Type, uint64_t> abort_cnt_by_type;
+
+   ClientOutput() : txn_cnt(0), commit_cnt(0), abort_cnt(0)
+   {
+      txn_cnt_by_type[Transaction::Type::ADD_USER] = 0;
+      txn_cnt_by_type[Transaction::Type::POST]     = 0;
+      txn_cnt_by_type[Transaction::Type::FOLLOW]   = 0;
+      txn_cnt_by_type[Transaction::Type::TIMELINE] = 0;
+
+      commit_cnt_by_type[Transaction::Type::ADD_USER] = 0;
+      commit_cnt_by_type[Transaction::Type::POST]     = 0;
+      commit_cnt_by_type[Transaction::Type::FOLLOW]   = 0;
+      commit_cnt_by_type[Transaction::Type::TIMELINE] = 0;
+
+      abort_cnt_by_type[Transaction::Type::ADD_USER] = 0;
+      abort_cnt_by_type[Transaction::Type::POST]     = 0;
+      abort_cnt_by_type[Transaction::Type::FOLLOW]   = 0;
+      abort_cnt_by_type[Transaction::Type::TIMELINE] = 0;
+   }
 };
 
 class Client {

@@ -72,8 +72,9 @@ Client::run_transactions()
    };
 
    for (int i = 0; i < RETWIS_NUM_TRANSACTIONS_PER_CLIENT; ++i) {
-      uint64_t abort_cnt = 0;
-      switch (txn_chooser->Next()) {
+      uint64_t          abort_cnt = 0;
+      Transaction::Type type      = txn_chooser->Next();
+      switch (type) {
          case Transaction::Type::ADD_USER:
          {
             std::string        user_id = std::to_string(get_next_global_uid());
@@ -114,6 +115,10 @@ Client::run_transactions()
       output.txn_cnt++;
       output.commit_cnt += (abort_cnt == 0);
       output.abort_cnt += abort_cnt;
+
+      output.txn_cnt_by_type[type]++;
+      output.commit_cnt_by_type[type] += (abort_cnt == 0);
+      output.abort_cnt_by_type[type] += abort_cnt;
    }
 }
 

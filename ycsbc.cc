@@ -346,6 +346,16 @@ PrintLatencyStatistics(std::vector<double> &latencies,
    out << "P99.9: " << latencies[latencies.size() * 999 / 1000] << std::endl;
 };
 
+
+void
+printSlice(char fill, double percentage)
+{
+   int width = (percentage + 0.5) / 2;
+   for (int i = 0; i < width; i++) {
+      cout << fill;
+   }
+   cout << " " << percentage << "%";
+}
 int
 main(const int argc, const char *argv[])
 {
@@ -497,7 +507,7 @@ main(const int argc, const char *argv[])
       }
       double init_duration = timer.End();
 
-      std::cout << "Retwis Init finished (" << init_duration << " s) Run transactions\n";
+      std::cout << "Retwis Init finished (" << init_duration << " s)\n";
 
       retwis::ClientOutput output[num_threads];
 
@@ -530,27 +540,87 @@ main(const int argc, const char *argv[])
          cout << "\n";
       }
 
-      uint64_t total_committed_cnt = 0;
-      uint64_t total_aborted_cnt   = 0;
+      uint64_t total_commit_cnt = 0;
+      uint64_t total_abort_cnt  = 0;
+
+      std::map<retwis::Transaction::Type, uint64_t> total_commit_cnt_by_type;
+      std::map<retwis::Transaction::Type, uint64_t> total_abort_cnt_by_type;
 
       for (unsigned int i = 0; i < num_threads; ++i) {
          cout << "[Client " << i << "] txn_cnt: " << output[i].commit_cnt
               << ", abort_cnt: " << output[i].abort_cnt << endl;
-         total_committed_cnt += output[i].commit_cnt;
-         total_aborted_cnt += output[i].abort_cnt;
+
+         // Collect counts from all threads
+         total_commit_cnt += output[i].commit_cnt;
+         total_abort_cnt += output[i].abort_cnt;
+
+         total_commit_cnt_by_type[retwis::Transaction::Type::ADD_USER] +=
+            output[i].commit_cnt_by_type[retwis::Transaction::Type::ADD_USER];
+         total_commit_cnt_by_type[retwis::Transaction::Type::POST] +=
+            output[i].commit_cnt_by_type[retwis::Transaction::Type::POST];
+         total_commit_cnt_by_type[retwis::Transaction::Type::FOLLOW] +=
+            output[i].commit_cnt_by_type[retwis::Transaction::Type::FOLLOW];
+         total_commit_cnt_by_type[retwis::Transaction::Type::TIMELINE] +=
+            output[i].commit_cnt_by_type[retwis::Transaction::Type::TIMELINE];
+
+         total_abort_cnt_by_type[retwis::Transaction::Type::ADD_USER] +=
+            output[i].abort_cnt_by_type[retwis::Transaction::Type::ADD_USER];
+         total_abort_cnt_by_type[retwis::Transaction::Type::POST] +=
+            output[i].abort_cnt_by_type[retwis::Transaction::Type::POST];
+         total_abort_cnt_by_type[retwis::Transaction::Type::FOLLOW] +=
+            output[i].abort_cnt_by_type[retwis::Transaction::Type::FOLLOW];
+         total_abort_cnt_by_type[retwis::Transaction::Type::TIMELINE] +=
+            output[i].abort_cnt_by_type[retwis::Transaction::Type::TIMELINE];
       }
 
       cout << "# Transaction throughput (KTPS)" << endl;
       cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
            << num_threads << '\t';
-      cout << total_committed_cnt / run_duration / 1000 << endl;
+      cout << total_commit_cnt / run_duration / 1000 << endl;
       cout << "Run duration (sec):\t" << run_duration << endl;
 
-      cout << "# Abort count:\t" << total_aborted_cnt << '\n';
+      cout << "# Abort count:\t" << total_abort_cnt << '\n';
       cout << "Abort rate:\t"
-           << (double)total_aborted_cnt
-                 / (total_aborted_cnt + total_committed_cnt)
+           << (double)total_abort_cnt / (total_abort_cnt + total_commit_cnt)
            << "\n";
+
+      cout << "=============================\n";
+      cout << "--- Commit count breakdown:\n";
+      printSlice('#',
+                 total_commit_cnt_by_type[retwis::Transaction::Type::ADD_USER]
+                    * 100.0 / total_commit_cnt);
+      cout << " (ADD_USER)\n";
+      printSlice('#',
+                 total_commit_cnt_by_type[retwis::Transaction::Type::POST]
+                    * 100.0 / total_commit_cnt);
+      cout << " (POST)\n";
+      printSlice('#',
+                 total_commit_cnt_by_type[retwis::Transaction::Type::FOLLOW]
+                    * 100.0 / total_commit_cnt);
+      cout << " (FOLLOW)\n";
+      printSlice('#',
+                 total_commit_cnt_by_type[retwis::Transaction::Type::TIMELINE]
+                    * 100.0 / total_commit_cnt);
+      cout << " (TIMELINE)\n";
+
+      cout << "--- Abort count breakdown:\n";
+      printSlice('#',
+                 total_abort_cnt_by_type[retwis::Transaction::Type::ADD_USER]
+                    * 100.0 / total_abort_cnt);
+      cout << " (ADD_USER)\n";
+      printSlice('#',
+                 total_abort_cnt_by_type[retwis::Transaction::Type::POST]
+                    * 100.0 / total_abort_cnt);
+      cout << " (POST)\n";
+      printSlice('#',
+                 total_abort_cnt_by_type[retwis::Transaction::Type::FOLLOW]
+                    * 100.0 / total_abort_cnt);
+      cout << " (FOLLOW)\n";
+      printSlice('#',
+                 total_abort_cnt_by_type[retwis::Transaction::Type::TIMELINE]
+                    * 100.0 / total_abort_cnt);
+      cout << " (TIMELINE)\n";
+      cout << "=============================\n";
    } else {
       db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
       if (!db) {
