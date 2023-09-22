@@ -173,11 +173,12 @@ public:
 
 class YCSBOutput {
 public:
-   uint64_t            commit_cnt;
-   uint64_t            abort_cnt;
-   uint64_t            txn_cnt;
-   std::vector<double> commit_txn_latencies;
-   std::vector<double> abort_txn_latencies;
+   uint64_t                   commit_cnt;
+   uint64_t                   abort_cnt;
+   uint64_t                   txn_cnt;
+   std::vector<double>        commit_txn_latencies;
+   std::vector<double>        abort_txn_latencies;
+   std::vector<unsigned long> abort_cnt_per_txn;
 
    YCSBOutput() : commit_cnt(0), abort_cnt(0), txn_cnt(0){};
 };
@@ -267,6 +268,7 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
       output->abort_cnt            = client.GetAbortCnt();
       output->commit_txn_latencies = client.GetCommitTxnLatnecies();
       output->abort_txn_latencies  = client.GetAbortTxnLatnecies();
+      output->abort_cnt_per_txn    = client.GetAbortCntPerTxn();
    }
 }
 
@@ -324,25 +326,24 @@ bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
    // std::endl;
 }
 
+template<typename T>
 void
-PrintLatencyStatistics(std::vector<double> &latencies,
-                       std::ostream        &out = std::cout)
+PrintDistribution(std::vector<T> &data, std::ostream &out = std::cout)
 {
-   if (latencies.empty()) {
+   if (data.empty()) {
       return;
    }
 
-   out << "Min: " << latencies.front() << std::endl;
-   out << "Max: " << latencies.back() << std::endl;
+   out << "Min: " << data.front() << std::endl;
+   out << "Max: " << data.back() << std::endl;
    out << "Avg: "
-       << std::accumulate(latencies.begin(), latencies.end(), 0.0)
-             / latencies.size()
+       << std::accumulate(data.begin(), data.end(), 0.0) / data.size()
        << std::endl;
-   out << "P50: " << latencies[latencies.size() / 2] << std::endl;
-   out << "P90: " << latencies[latencies.size() * 9 / 10] << std::endl;
-   out << "P95: " << latencies[latencies.size() * 95 / 100] << std::endl;
-   out << "P99: " << latencies[latencies.size() * 99 / 100] << std::endl;
-   out << "P99.9: " << latencies[latencies.size() * 999 / 1000] << std::endl;
+   out << "P50: " << data[data.size() / 2] << std::endl;
+   out << "P90: " << data[data.size() * 9 / 10] << std::endl;
+   out << "P95: " << data[data.size() * 95 / 100] << std::endl;
+   out << "P99: " << data[data.size() * 99 / 100] << std::endl;
+   out << "P99.9: " << data[data.size() * 999 / 1000] << std::endl;
 };
 
 int
@@ -464,9 +465,9 @@ main(const int argc, const char *argv[])
                 total_abort_txn_latencies.end());
 
       std::cout << "# Commit Latencies (us)" << std::endl;
-      PrintLatencyStatistics(total_commit_txn_latencies);
+      PrintDistribution<double>(total_commit_txn_latencies);
       std::cout << "# Abort Latencies (us)" << std::endl;
-      PrintLatencyStatistics(total_abort_txn_latencies);
+      PrintDistribution<double>(total_abort_txn_latencies);
 
       db->PrintDBStats();
    } else {
@@ -639,6 +640,9 @@ main(const int argc, const char *argv[])
             total_abort_cnt += ycsb_outputs[thr_i].abort_cnt;
          }
          cout << "# Transaction count:\t" << total_txn_count << endl;
+         cout << "# Committed Transaction count:\t" << total_commit_cnt << endl;
+         cout << "# Aborted Transaction count:\t"
+              << total_txn_count - total_commit_cnt << endl;
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
               << num_run_threads << '\t';
@@ -670,9 +674,24 @@ main(const int argc, const char *argv[])
                    total_abort_txn_latencies.end());
 
          std::cout << "# Commit Latencies (us)" << std::endl;
-         PrintLatencyStatistics(total_commit_txn_latencies);
+         PrintDistribution<double>(total_commit_txn_latencies);
          std::cout << "# Abort Latencies (us)" << std::endl;
-         PrintLatencyStatistics(total_abort_txn_latencies);
+         PrintDistribution<double>(total_abort_txn_latencies);
+
+         /*
+          * Print abort count per transaction
+          */
+         std::vector<unsigned long> total_abort_cnt_per_txn;
+         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+            total_abort_cnt_per_txn.insert(
+               total_abort_cnt_per_txn.end(),
+               ycsb_outputs[thr_i].abort_cnt_per_txn.begin(),
+               ycsb_outputs[thr_i].abort_cnt_per_txn.end());
+         }
+         std::sort(total_abort_cnt_per_txn.begin(),
+                   total_abort_cnt_per_txn.end());
+         std::cout << "# Abort count per transaction" << std::endl;
+         PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
 
          db->PrintDBStats();
       }

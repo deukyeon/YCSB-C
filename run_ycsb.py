@@ -57,13 +57,19 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
     abort_counts = []
     abort_rates = []
 
+    total_num_txns = []
+    total_num_committed_txns = []
+    total_num_aborted_txns = []
+
     # load_data = False
     run_data = False
 
     commit_latency_data = False
     abort_latency_data = False
 
-    latency_data_keys = [
+    abort_cnt_per_txn_data = False
+
+    dist_stats_keys = [
         'Min',
         'Max',
         'Avg',
@@ -74,9 +80,11 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
         'P99.9']
     commit_latencies = {}
     abort_latencies = {}
-    for key in latency_data_keys:
+    abort_cnts_per_txn = {}
+    for key in dist_stats_keys:
         commit_latencies[key] = []
         abort_latencies[key] = []
+        abort_cnts_per_txn[key] = []
 
     for line in lines:
         # if load_data:
@@ -98,6 +106,17 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             run_tputs.append(fields[-1])
             run_data = False
 
+            
+        if line.startswith("# Transaction count"):
+            fields = line.split()
+            total_num_txns.append(fields[-1])
+        if line.startswith("# Committed Transaction count"):
+            fields = line.split()
+            total_num_committed_txns.append(fields[-1])
+        if line.startswith("# Aborted Transaction count"):
+            fields = line.split()
+            total_num_aborted_txns.append(fields[-1])
+
         if line.startswith("# Abort count"):
             fields = line.split()
             abort_counts.append(fields[-1])
@@ -118,30 +137,45 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             
         if commit_latency_data:
             fields = line.split(sep=':')
-            if fields[0] not in latency_data_keys:
+            if fields[0] not in dist_stats_keys:
                 commit_latency_data = False
                 continue
             commit_latencies[fields[0]].append(fields[1].strip())
-            if fields[0] == latency_data_keys[-1]:
+            if fields[0] == dist_stats_keys[-1]:
                 commit_latency_data = False
             
         if abort_latency_data:
             fields = line.split(sep=':')
-            if fields[0] not in latency_data_keys:
+            if fields[0] not in dist_stats_keys:
                 if no_abort_latency_data:
-                    for key in latency_data_keys:
+                    for key in dist_stats_keys:
                         abort_latencies[key].append('0')
                 abort_latency_data = False
                 continue
             abort_latencies[fields[0]].append(fields[1].strip())
             no_abort_latency_data = False
-            if fields[0] == latency_data_keys[-1]:
+            if fields[0] == dist_stats_keys[-1]:
                 abort_latency_data = False
 
+                
+        if line.startswith("# Abort count per transaction"):
+            abort_cnt_per_txn_data = True
+            continue
+
+        if abort_cnt_per_txn_data:
+            fields = line.split(sep=':')
+            if fields[0] not in dist_stats_keys:
+                abort_cnt_per_txn_data = False
+                continue
+            abort_cnts_per_txn[fields[0]].append(fields[1].strip())
+            if fields[0] == dist_stats_keys[-1]:
+                abort_cnt_per_txn_data = False
+
     # print csv
-    # for tuple in zip(run_threads, load_tputs, run_tputs, abort_counts, abort_rates):
-    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, commit_latencies['Min'], commit_latencies['Max'], commit_latencies['Avg'], commit_latencies['P50'], commit_latencies['P90'], commit_latencies['P95'], commit_latencies['P99'], commit_latencies['P99.9'], abort_latencies['Min'], abort_latencies['Max'], abort_latencies['Avg'], abort_latencies['P50'], abort_latencies['P90'], abort_latencies['P95'], abort_latencies['P99'], abort_latencies['P99.9']):
+    for tuple in zip(run_threads, run_tputs, abort_counts, abort_rates, total_num_txns, total_num_committed_txns, total_num_aborted_txns, abort_cnts_per_txn['Min'], abort_cnts_per_txn['Max'], abort_cnts_per_txn['Avg'], abort_cnts_per_txn['P50'], abort_cnts_per_txn['P90'], abort_cnts_per_txn['P95'], abort_cnts_per_txn['P99'], abort_cnts_per_txn['P99.9'], commit_latencies['Min'], commit_latencies['Max'], commit_latencies['Avg'], commit_latencies['P50'], commit_latencies['P90'], commit_latencies['P95'], commit_latencies['P99'], commit_latencies['P99.9'], abort_latencies['Min'], abort_latencies['Max'], abort_latencies['Avg'], abort_latencies['P50'], abort_latencies['P90'], abort_latencies['P95'], abort_latencies['P99'], abort_latencies['P99.9']):
         print(system, conf, ','.join(tuple), seq, sep=',', file=csv)
+
+        
 
 
 def generateOutputFile(input, output=sys.stdout):
@@ -198,17 +232,22 @@ def main(argc, argv):
         printHelp()
 
     label = system + '-' + conf
-    csv_path = f'{label}.csv'
-    csv = open(csv_path, 'w')
-    print("system,conf,threads,goodput,aborts,abort_rate,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
     num_repeats = 2
-    if parse_result_only:
+
+    def parse():
+        csv_path = f'{label}.csv'
+        csv = open(csv_path, 'w')
+        print("system,conf,threads,goodput,aborts,abort_rate,txns,committed_txns,aborted_txns,abort_cnt_per_txn_min,abort_cnt_per_txn_max,abort_cnt_per_txn_avg,abort_cnt_per_txn_p50,abort_cnt_per_txn_p90,abort_cnt_per_txn_p95,abort_cnt_per_txn_p99,abort_cnt_per_txn_p99.9,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
         for i in range(0, num_repeats):
             log_path = f'/tmp/{label}.{i}.log'
             parseLogfile(log_path, csv, system, conf, i)
         csv.close()
+        
         with open(f'{label}-result.csv', 'w') as out:
             generateOutputFile(csv_path, out)
+            
+    if parse_result_only:
+        parse()
         return
 
     ExpSystem.build(system, '../splinterdb')
@@ -274,12 +313,7 @@ def main(argc, argv):
             # run_shell_command('rm -f splinterdb.db')
         logfile.close()
     
-    for i in range(0, num_repeats):
-        log_path = f'/tmp/{label}.{i}.log'
-        parseLogfile(log_path, csv, system, conf, i)
-    csv.close()
-    with open(f'{label}-result.csv', 'w') as out:
-        generateOutputFile(csv_path, out)
+    parse()
 
 if __name__ == '__main__':
     main(len(sys.argv), sys.argv)

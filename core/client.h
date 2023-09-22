@@ -97,6 +97,11 @@ public:
    {
       return abort_txn_latencies;
    }
+   const std::vector<unsigned long> &
+   GetAbortCntPerTxn() const
+   {
+      return abort_cnt_per_txn;
+   }
 
 protected:
    virtual bool
@@ -141,9 +146,10 @@ protected:
    unsigned long                       txn_cnt;
    drand48_data                        drand_buffer;
 
-   utils::Timer<double> timer;
-   std::vector<double>  commit_txn_latencies;
-   std::vector<double>  abort_txn_latencies;
+   utils::Timer<double>       timer;
+   std::vector<double>        commit_txn_latencies;
+   std::vector<double>        abort_txn_latencies;
+   std::vector<unsigned long> abort_cnt_per_txn;
 };
 
 inline bool
@@ -315,6 +321,8 @@ Client::DoTransactionalOperations()
    } else {
       commit_txn_latencies.push_back(latency_us);
    }
+
+   abort_cnt_per_txn.push_back(retry);
 
    operations_in_transaction.clear();
 
