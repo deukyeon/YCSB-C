@@ -272,8 +272,26 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
    }
 }
 
-struct tpcc_stats {
+class TPCCInput {
+public:
+   ycsbc::DB                      *db;
+   tpcc::TPCCWorkload             *wl;
+   uint64_t                        total_num_clients;
+   double                          benchmark_seconds;
+   utils::Timer<double>            benchmark_timer;
+   volatile std::atomic<uint64_t> *global_num_clients_done;
+
+   TPCCInput()
+      : db(nullptr),
+        wl(nullptr),
+        total_num_clients(0),
+        benchmark_seconds(0),
+        global_num_clients_done(nullptr){};
+};
+
+struct TPCCOutput {
    uint64_t            txn_cnt;
+   uint64_t            commit_cnt;
    uint64_t            abort_cnt;
    uint64_t            abort_cnt_payment;
    uint64_t            abort_cnt_new_order;
@@ -284,18 +302,34 @@ struct tpcc_stats {
 };
 
 int
-DelegateTPCCClient(uint32_t            thread_id,
-                   ycsbc::DB          *db,
-                   tpcc::TPCCWorkload *wl,
-                   tpcc_stats         *stats)
+DelegateTPCCClient(uint32_t thread_id, TPCCInput *input, TPCCOutput *stats)
 {
-   db->Init();
+   input->db->Init();
 
-   tpcc::TPCCClient client(thread_id, wl);
-   client.run_transactions();
+   tpcc::TPCCClient client(thread_id, input->wl);
+
+   uint64_t txn_cnt = 0;
+
+   if (input->benchmark_seconds > 0) {
+      // timer-based running -- all clients make sure running at
+      // least benchmark_seconds
+      input->benchmark_timer.Start();
+      while (input->global_num_clients_done->load() < input->total_num_clients)
+      {
+         txn_cnt += client.run_transaction();
+         double duration = input->benchmark_timer.End();
+         if (duration > input->benchmark_seconds) {
+            input->global_num_clients_done->fetch_add(1);
+         }
+      }
+   } else {
+      txn_cnt = tpcc::g_total_num_transactions;
+      client.run_transactions();
+   }
 
    if (stats) {
-      stats->txn_cnt              = client.GetTxnCnt();
+      stats->txn_cnt              = txn_cnt;
+      stats->commit_cnt           = client.GetCommitCnt();
       stats->abort_cnt            = client.GetAbortCnt();
       stats->abort_cnt_payment    = client.GetAbortCntPayment();
       stats->abort_cnt_new_order  = client.GetAbortCntNewOrder();
@@ -305,7 +339,7 @@ DelegateTPCCClient(uint32_t            thread_id,
       stats->abort_txn_latencies  = client.GetAbortTxnLatnecies();
    }
 
-   db->Close();
+   input->db->Close();
 
 
    return 0;
@@ -378,13 +412,23 @@ main(const int argc, const char *argv[])
       tpcc_wl.init((ycsbc::TransactionalSplinterDB *)db,
                    num_threads); // loads TPCC tables into DB
 
-      std::vector<tpcc_stats>  _tpcc_stats(num_threads);
+      std::vector<TPCCInput>   _tpcc_inputs(num_threads);
+      std::vector<TPCCOutput>  _tpcc_output(num_threads);
       std::vector<std::thread> tpcc_threads;
+      std::atomic<uint64_t>    num_clients_done(0);
+
       timer.Start();
       {
          for (unsigned int i = 0; i < num_threads; ++i) {
+            _tpcc_inputs[i].db = db;
+            _tpcc_inputs[i].wl = &tpcc_wl;
+
+            _tpcc_inputs[i].benchmark_seconds =
+               stof(props.GetProperty("benchmark_seconds", "0"));
+            _tpcc_inputs[i].global_num_clients_done = &num_clients_done;
+            _tpcc_inputs[i].total_num_clients       = num_threads;
             tpcc_threads.emplace_back(std::thread(
-               DelegateTPCCClient, i, db, &tpcc_wl, &_tpcc_stats[i]));
+               DelegateTPCCClient, i, &_tpcc_inputs[i], &_tpcc_output[i]));
             bind_to_cpu(tpcc_threads, i);
          }
          for (auto &t : tpcc_threads) {
@@ -405,14 +449,15 @@ main(const int argc, const char *argv[])
       uint64_t total_attempts_new_order    = 0;
 
       for (unsigned int i = 0; i < num_threads; ++i) {
-         cout << "[Client " << i << "] txn_cnt: " << _tpcc_stats[i].txn_cnt
-              << ", abort_cnt: " << _tpcc_stats[i].abort_cnt << endl;
-         total_committed_cnt += _tpcc_stats[i].txn_cnt;
-         total_aborted_cnt += _tpcc_stats[i].abort_cnt;
-         total_aborted_cnt_payment += _tpcc_stats[i].abort_cnt_payment;
-         total_aborted_cnt_new_order += _tpcc_stats[i].abort_cnt_new_order;
-         total_attempts_payment += _tpcc_stats[i].attempts_payment;
-         total_attempts_new_order += _tpcc_stats[i].attempts_new_order;
+         cout << "[Client " << i
+              << "] commit_cnt: " << _tpcc_output[i].commit_cnt
+              << ", abort_cnt: " << _tpcc_output[i].abort_cnt << endl;
+         total_committed_cnt += _tpcc_output[i].commit_cnt;
+         total_aborted_cnt += _tpcc_output[i].abort_cnt;
+         total_aborted_cnt_payment += _tpcc_output[i].abort_cnt_payment;
+         total_aborted_cnt_new_order += _tpcc_output[i].abort_cnt_new_order;
+         total_attempts_payment += _tpcc_output[i].attempts_payment;
+         total_attempts_new_order += _tpcc_output[i].attempts_new_order;
       }
 
       cout << "# Transaction throughput (KTPS)" << endl;
@@ -451,12 +496,12 @@ main(const int argc, const char *argv[])
       for (unsigned int i = 0; i < num_threads; ++i) {
          total_commit_txn_latencies.insert(
             total_commit_txn_latencies.end(),
-            _tpcc_stats[i].commit_txn_latencies.begin(),
-            _tpcc_stats[i].commit_txn_latencies.end());
+            _tpcc_output[i].commit_txn_latencies.begin(),
+            _tpcc_output[i].commit_txn_latencies.end());
          total_abort_txn_latencies.insert(
             total_abort_txn_latencies.end(),
-            _tpcc_stats[i].abort_txn_latencies.begin(),
-            _tpcc_stats[i].abort_txn_latencies.end());
+            _tpcc_output[i].abort_txn_latencies.begin(),
+            _tpcc_output[i].abort_txn_latencies.end());
       }
 
       std::sort(total_commit_txn_latencies.begin(),
@@ -633,7 +678,7 @@ main(const int argc, const char *argv[])
          uint64_t total_abort_cnt  = 0;
          for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
             cout << "[Client " << thr_i
-                 << "] txn_cnt: " << ycsb_outputs[thr_i].commit_cnt
+                 << "] commit_cnt: " << ycsb_outputs[thr_i].commit_cnt
                  << ", abort_cnt: " << ycsb_outputs[thr_i].abort_cnt << endl;
             total_txn_count += ycsb_outputs[thr_i].txn_cnt;
             total_commit_cnt += ycsb_outputs[thr_i].commit_cnt;

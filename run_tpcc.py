@@ -7,7 +7,7 @@ import getopt
 from exp_system import *
 
 def printHelp():
-    print("Usage:", sys.argv[0], "-s [system] -u -d [device] -f -p -b -c [cache_size_mb] -h", file=sys.stderr)
+    print("Usage:", sys.argv[0], "-s [system] -u -d [device] -f -p -b -c [cache_size_mb] -r [run_seconds] -h", file=sys.stderr)
     print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
     print("\t-u,--upsert: Enable the upsertification", file=sys.stderr)
@@ -16,6 +16,7 @@ def printHelp():
     print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
     print("\t-b,--bgthreads: Enable background threads", file=sys.stderr)
     print("\t-c,--cachesize: Set the cache size in MB (default: 128)", file=sys.stderr)
+    print("\t-r,--run_seconds: Set the run time in seconds (default: 0, which means disabled)", file=sys.stderr)
     print("\t-h,--help: Print this help message", file=sys.stderr)
     exit(1)
 
@@ -141,8 +142,8 @@ def change_num_warehouses(num_wh):
 
 
 def main(argc, argv):
-    opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pfbc:h', 
-                            ['system=', 'upsert', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'help'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:ud:pfbc:r:h', 
+                            ['system=', 'upsert', 'device=', 'parse', 'force', 'bgthreads', 'cachesize=', 'run_seconds=', 'help'])
     system = None
     dev_name = '/dev/md0'
     conf = 'tpcc'
@@ -151,6 +152,7 @@ def main(argc, argv):
     force_to_run = False
     enable_bgthreads = False
     cache_size_mb = 256
+    run_seconds = 0
 
     for opt, arg in opts:
         if opt in ('-s', '--system'):
@@ -173,6 +175,8 @@ def main(argc, argv):
             enable_bgthreads = True
         elif opt in ('-c', '--cachesize'):
             cache_size_mb = int(arg)
+        elif opt in ('-r', '--run_seconds'):
+            run_seconds = float(arg)
         elif opt in ('-h', '--help'):
             printHelp()
 
@@ -225,7 +229,7 @@ def main(argc, argv):
                             -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
                             -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
         cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} \
-            -threads {thread} -benchmark tpcc {splinterdb_opts} {upsert_opt}'
+            -threads {thread} -benchmark tpcc -benchmark_seconds {run_seconds} {splinterdb_opts} {upsert_opt}'
         cmds.append(cmd)
 
     for i in range(0, num_repeats):

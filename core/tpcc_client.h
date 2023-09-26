@@ -26,8 +26,8 @@ class TPCCClient {
 public:
    TPCCClient(int thread_id, TPCCWorkload *wl) : _thread_id(thread_id), _wl(wl)
    {
-      abort_cnt = 0;
-      txn_cnt   = 0;
+      abort_cnt  = 0;
+      commit_cnt = 0;
 
       abort_cnt_payment   = 0;
       abort_cnt_new_order = 0;
@@ -37,6 +37,8 @@ public:
    }
 
    virtual bool
+   run_transaction();
+   virtual bool
    run_transactions();
 
    virtual ~TPCCClient()
@@ -44,11 +46,11 @@ public:
       // TPCCClient::total_abort_cnt.fetch_add(abort_cnt);
    }
 
-   // getters for txn_cnt and abort_cnt
+   // getters for commit_cnt and abort_cnt
    int
-   GetTxnCnt() const
+   GetCommitCnt() const
    {
-      return txn_cnt;
+      return commit_cnt;
    }
    int
    GetAbortCnt() const
@@ -97,7 +99,7 @@ protected:
    int           _thread_id;
    TPCCWorkload *_wl;
    unsigned long abort_cnt;
-   unsigned long txn_cnt;
+   unsigned long commit_cnt;
 
    unsigned long abort_cnt_payment;
    unsigned long abort_cnt_new_order;
@@ -111,62 +113,68 @@ protected:
 };
 
 inline bool
-TPCCClient::run_transactions()
+TPCCClient::run_transaction()
 {
    TPCCTransaction txn;
+   txn.init(_thread_id);
 
-   for (uint32_t i = 0; i < g_total_num_transactions; i++) {
-      txn.init(_thread_id);
+   tpcc::tpcc_txn_type current_txn_type = txn.type;
 
-      tpcc::tpcc_txn_type current_txn_type = txn.type;
+   bool     need_retry = false;
+   uint32_t retry      = 0;
 
-      bool     need_retry = false;
-      uint32_t retry      = 0;
-
-      timer.Start();
-      do {
+   timer.Start();
+   do {
+      switch (current_txn_type) {
+         case TPCC_PAYMENT:
+            ++attempts_payment;
+            break;
+         case TPCC_NEW_ORDER:
+            ++attempts_new_order;
+            break;
+         default:
+            assert(false);
+      }
+      need_retry = (_wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict);
+      if (need_retry) {
          switch (current_txn_type) {
             case TPCC_PAYMENT:
-               ++attempts_payment;
+               ++abort_cnt_payment;
                break;
             case TPCC_NEW_ORDER:
-               ++attempts_new_order;
+               ++abort_cnt_new_order;
                break;
             default:
                assert(false);
          }
-         need_retry = (_wl->run_transaction(&txn) == ycsbc::DB::kErrorConflict);
-         if (need_retry) {
-            switch (current_txn_type) {
-               case TPCC_PAYMENT:
-                  ++abort_cnt_payment;
-                  break;
-               case TPCC_NEW_ORDER:
-                  ++abort_cnt_new_order;
-                  break;
-               default:
-                  assert(false);
-            }
-            ++abort_cnt;
+         ++abort_cnt;
 
-            const int sleep_for = std::pow(2.0, retry) * g_abort_penalty_us;
-            if (sleep_for > 0) {
-               std::this_thread::sleep_for(
-                  std::chrono::microseconds(sleep_for));
-            }
-            ++retry;
-         } else {
-            ++txn_cnt;
+         const int sleep_for = std::pow(2.0, retry) * g_abort_penalty_us;
+         if (sleep_for > 0) {
+            std::this_thread::sleep_for(std::chrono::microseconds(sleep_for));
          }
-      } while (need_retry && retry <= g_max_txn_retry);
-
-      double latency_sec = timer.End();
-      double latency_us  = latency_sec * 1000000;
-      if (need_retry) {
-         abort_txn_latencies.push_back(latency_us);
+         ++retry;
       } else {
-         commit_txn_latencies.push_back(latency_us);
+         ++commit_cnt;
       }
+   } while (need_retry && retry <= g_max_txn_retry);
+
+   double latency_sec = timer.End();
+   double latency_us  = latency_sec * 1000000;
+   if (need_retry) {
+      abort_txn_latencies.push_back(latency_us);
+   } else {
+      commit_txn_latencies.push_back(latency_us);
+   }
+
+   return true;
+}
+
+inline bool
+TPCCClient::run_transactions()
+{
+   for (uint32_t i = 0; i < g_total_num_transactions; i++) {
+      run_transaction();
    }
    return true;
 }
