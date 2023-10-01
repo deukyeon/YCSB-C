@@ -203,7 +203,7 @@ def main(argc, argv):
         printHelp()
 
     label = system + '-' + conf
-    num_repeats = 1
+    num_repeats = 2
 
     def parse():
         csv_path = f'{label}.csv'
