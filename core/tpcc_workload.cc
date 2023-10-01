@@ -111,19 +111,22 @@ TPCCTransaction::gen_order_status(uint64_t thd_id)
 }
 
 void
-TPCCWorkload::init(ycsbc::TransactionalSplinterDB *db,
+TPCCWorkload::init(utils::Properties              &props,
+                   ycsbc::TransactionalSplinterDB *db,
                    uint64_t                        num_client_threads)
 {
+   configure_parameters(props);
    printf(
       "Initializing TPCCWorkload; num_wh = %d, g_max_items = %d, "
       "g_cust_per_dist = %d, g_max_txn_retry = %d, g_abort_penalty_us = %d, "
-      "g_total_num_transactions = %d\n",
+      "g_total_num_transactions = %d, g_use_upsert = %d\n",
       g_num_wh,
       g_max_items,
       g_cust_per_dist,
       g_max_txn_retry,
       g_abort_penalty_us,
-      g_total_num_transactions);
+      g_total_num_transactions,
+      g_use_upserts);
    _db = db;
    // load all tables in the database
    tpcc_buffer = new drand48_data[num_client_threads + g_num_wh];
@@ -146,6 +149,28 @@ void
 TPCCWorkload::deinit()
 {
    delete[] tpcc_buffer;
+}
+
+void
+TPCCWorkload::configure_parameters(utils::Properties &props)
+{
+   g_num_wh = std::stoi(props.GetProperty("num_wh", std::to_string(NUM_WH)));
+   g_max_items =
+      std::stoi(props.GetProperty("max_items", std::to_string(MAX_ITEMS)));
+   g_cust_per_dist = std::stoi(
+      props.GetProperty("cust_per_dist", std::to_string(MAX_CUST_PER_DIST)));
+   g_max_txn_retry = std::stoi(
+      props.GetProperty("max_txn_retry", std::to_string(MAX_TXN_RETRY)));
+   g_abort_penalty_us = std::stoi(
+      props.GetProperty("abort_penalty_us", std::to_string(ABORT_PENALTY_US)));
+   g_perc_payment = std::stod(
+      props.GetProperty("perc_payment", std::to_string(PERC_PAYMENT)));
+   g_wh_update =
+      props.GetProperty("wh_update", std::to_string(WH_UPDATE)) == "true";
+   g_total_num_transactions = std::stoi(props.GetProperty(
+      "total_num_transactions", std::to_string(TOTAL_NUM_TRANSACTIONS)));
+   g_use_upserts =
+      props.GetProperty("use_upserts", std::to_string(false)) == "true";
 }
 
 void *

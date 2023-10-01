@@ -6,22 +6,11 @@ import sys
 import getopt
 from exp_system import *
 
-
-available_workloads = [
-    'write_intensive',
-    'write_intensive_large_value',
-    'write_intensive_test',
-    'read_intensive',
-    'read_intensive_test',
-]
-
-
 def printHelp():
     print("Usage:", sys.argv[0], "-s [system] -w [workload] -d [device] -f -p -b -c [cache_size_mb] -r [run_seconds] -h", file=sys.stderr)
     print("\t-s,--system [system]: Choose one of the followings --",
           available_systems, file=sys.stderr)
-    print("\t-w,--workload [workload]: Choose one of the followings --",
-          available_workloads, file=sys.stderr)
+    print("\t-w,--workload [workload]: Specify a spec file in workloads", file=sys.stderr)
     print("\t-d,--device [device]: Choose the device for SplinterDB (default: /dev/md0)", file=sys.stderr)
     print("\t-f,--force: Force to run (Delete all existing logs)", file=sys.stderr)
     print("\t-p,--parse: Parse the logs without running", file=sys.stderr)
@@ -208,8 +197,7 @@ def main(argc, argv):
                 printHelp()
         elif opt in ('-w', '--workload'):
             conf = arg
-            if conf not in available_workloads:
-                printHelp()
+            spec_file = 'workloads/' + conf + '.spec'
         elif opt in ('-d', '--device'):
             dev_name = arg
             if not os.path.exists(dev_name):
@@ -228,7 +216,12 @@ def main(argc, argv):
         elif opt in ('-h', '--help'):
             printHelp()
 
-    if not system or not conf:
+    if not system:
+        print("Invalid system", file=sys.stderr)
+        printHelp()
+
+    if not conf or not os.path.isfile(spec_file):
+        print("Invalid workload", file=sys.stderr)
         printHelp()
 
     label = system + '-' + conf
@@ -243,7 +236,7 @@ def main(argc, argv):
             parseLogfile(log_path, csv, system, conf, i)
         csv.close()
         
-        with open(f'{label}-result.csv', 'w') as out:
+        with open(f'{label}', 'w') as out:
             generateOutputFile(csv_path, out)
             
     if parse_result_only:
@@ -253,7 +246,6 @@ def main(argc, argv):
     ExpSystem.build(system, '../splinterdb')
 
     db = 'splinterdb' if system == 'splinterdb' else 'transactional_splinterdb'
-    spec_file = 'workloads/' + conf + '.spec'
     
     # This is the maximum number of threads that can be run in parallel in the system.
     max_total_threads = 60

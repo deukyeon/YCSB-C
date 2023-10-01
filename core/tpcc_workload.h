@@ -213,7 +213,9 @@ private:
 class TPCCWorkload {
 public:
    void
-   init(ycsbc::TransactionalSplinterDB *db, uint64_t num_client_threads);
+   init(utils::Properties              &props,
+        ycsbc::TransactionalSplinterDB *db,
+        uint64_t                        num_client_threads);
    void
    deinit();
 
@@ -226,6 +228,9 @@ private:
       uint32_t      tid;
    };
    ycsbc::TransactionalSplinterDB *_db;
+
+   void
+   configure_parameters(utils::Properties &props);
 
    static void *
    thread_init_tables(void *args);

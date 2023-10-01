@@ -407,114 +407,124 @@ main(const int argc, const char *argv[])
                                               load_workload.preloaded,
                                               tpcc::tpcc_merge_tuple,
                                               tpcc::tpcc_merge_tuple_final);
+      for (WorkloadProperties workload : run_workloads) {
+         tpcc::TPCCWorkload tpcc_wl;
+         tpcc_wl.init(workload.props,
+                      (ycsbc::TransactionalSplinterDB *)db,
+                      num_threads); // loads TPCC tables into DB
 
-      tpcc::TPCCWorkload tpcc_wl = tpcc::TPCCWorkload();
-      tpcc_wl.init((ycsbc::TransactionalSplinterDB *)db,
-                   num_threads); // loads TPCC tables into DB
+         std::vector<TPCCInput>   _tpcc_inputs(num_threads);
+         std::vector<TPCCOutput>  _tpcc_output(num_threads);
+         std::vector<std::thread> tpcc_threads;
+         std::atomic<uint64_t>    num_clients_done(0);
 
-      std::vector<TPCCInput>   _tpcc_inputs(num_threads);
-      std::vector<TPCCOutput>  _tpcc_output(num_threads);
-      std::vector<std::thread> tpcc_threads;
-      std::atomic<uint64_t>    num_clients_done(0);
+         timer.Start();
+         {
+            for (unsigned int i = 0; i < num_threads; ++i) {
+               _tpcc_inputs[i].db = db;
+               _tpcc_inputs[i].wl = &tpcc_wl;
 
-      timer.Start();
-      {
+               _tpcc_inputs[i].benchmark_seconds =
+                  stof(props.GetProperty("benchmark_seconds", "0"));
+               _tpcc_inputs[i].global_num_clients_done = &num_clients_done;
+               _tpcc_inputs[i].total_num_clients       = num_threads;
+               tpcc_threads.emplace_back(std::thread(
+                  DelegateTPCCClient, i, &_tpcc_inputs[i], &_tpcc_output[i]));
+               bind_to_cpu(tpcc_threads, i);
+            }
+            for (auto &t : tpcc_threads) {
+               t.join();
+            }
+         }
+         double run_duration = timer.End();
+         if (pmode != no_progress) {
+            cout << "\n";
+         }
+         tpcc_wl.deinit();
+
+         uint64_t total_committed_cnt         = 0;
+         uint64_t total_aborted_cnt           = 0;
+         uint64_t total_aborted_cnt_payment   = 0;
+         uint64_t total_aborted_cnt_new_order = 0;
+         uint64_t total_attempts_payment      = 0;
+         uint64_t total_attempts_new_order    = 0;
+
          for (unsigned int i = 0; i < num_threads; ++i) {
-            _tpcc_inputs[i].db = db;
-            _tpcc_inputs[i].wl = &tpcc_wl;
-
-            _tpcc_inputs[i].benchmark_seconds =
-               stof(props.GetProperty("benchmark_seconds", "0"));
-            _tpcc_inputs[i].global_num_clients_done = &num_clients_done;
-            _tpcc_inputs[i].total_num_clients       = num_threads;
-            tpcc_threads.emplace_back(std::thread(
-               DelegateTPCCClient, i, &_tpcc_inputs[i], &_tpcc_output[i]));
-            bind_to_cpu(tpcc_threads, i);
+            cout << "[Client " << i
+                 << "] commit_cnt: " << _tpcc_output[i].commit_cnt
+                 << ", abort_cnt: " << _tpcc_output[i].abort_cnt << endl;
+            total_committed_cnt += _tpcc_output[i].commit_cnt;
+            total_aborted_cnt += _tpcc_output[i].abort_cnt;
+            total_aborted_cnt_payment += _tpcc_output[i].abort_cnt_payment;
+            total_aborted_cnt_new_order += _tpcc_output[i].abort_cnt_new_order;
+            total_attempts_payment += _tpcc_output[i].attempts_payment;
+            total_attempts_new_order += _tpcc_output[i].attempts_new_order;
          }
-         for (auto &t : tpcc_threads) {
-            t.join();
+
+         cout << "# Transaction throughput (KTPS)" << endl;
+         cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
+              << num_threads << '\t';
+         cout << total_committed_cnt / run_duration / 1000 << endl;
+         cout << "Run duration (sec):\t" << run_duration << endl;
+
+         cout << "# Abort count:\t" << total_aborted_cnt << '\n';
+         cout << "Abort rate:\t"
+              << (double)total_aborted_cnt
+                    / (total_aborted_cnt + total_committed_cnt)
+              << "\n";
+
+         if (total_aborted_cnt > 0) {
+            cout << "# (Payment) Abort rate(%):\t"
+                 << total_aborted_cnt_payment * 100.0 / total_aborted_cnt
+                 << '\n';
+            cout << "# (NewOrder) Abort rate(%):\t"
+                 << total_aborted_cnt_new_order * 100.0 / total_aborted_cnt
+                 << '\n';
+         } else {
+            cout << "# (Payment) Abort rate(%):\t0\n";
+            cout << "# (NewOrder) Abort rate(%):\t0\n";
          }
+
+         cout << "# (Payment) Failure rate(%):\t"
+              << total_aborted_cnt_payment * 100.0 / total_attempts_payment
+              << '\n';
+         cout << "# (NewOrder) Failure rate(%):\t"
+              << total_aborted_cnt_new_order * 100.0 / total_attempts_new_order
+              << '\n';
+
+         cout << "# (Payment) Total attempts:\t" << total_attempts_payment
+              << '\n';
+         cout << "# (NewOrder) Total attempts:\t" << total_attempts_new_order
+              << '\n';
+
+         /*
+          * Print Latencies
+          */
+         std::vector<double> total_commit_txn_latencies;
+         std::vector<double> total_abort_txn_latencies;
+         for (unsigned int i = 0; i < num_threads; ++i) {
+            total_commit_txn_latencies.insert(
+               total_commit_txn_latencies.end(),
+               _tpcc_output[i].commit_txn_latencies.begin(),
+               _tpcc_output[i].commit_txn_latencies.end());
+            total_abort_txn_latencies.insert(
+               total_abort_txn_latencies.end(),
+               _tpcc_output[i].abort_txn_latencies.begin(),
+               _tpcc_output[i].abort_txn_latencies.end());
+         }
+
+         std::sort(total_commit_txn_latencies.begin(),
+                   total_commit_txn_latencies.end());
+         std::sort(total_abort_txn_latencies.begin(),
+                   total_abort_txn_latencies.end());
+
+         std::cout << "# Commit Latencies (us)" << std::endl;
+         PrintDistribution<double>(total_commit_txn_latencies);
+         std::cout << "# Abort Latencies (us)" << std::endl;
+         PrintDistribution<double>(total_abort_txn_latencies);
+
+         db->PrintDBStats();
       }
-      double run_duration = timer.End();
-      if (pmode != no_progress) {
-         cout << "\n";
-      }
-      tpcc_wl.deinit();
-
-      uint64_t total_committed_cnt         = 0;
-      uint64_t total_aborted_cnt           = 0;
-      uint64_t total_aborted_cnt_payment   = 0;
-      uint64_t total_aborted_cnt_new_order = 0;
-      uint64_t total_attempts_payment      = 0;
-      uint64_t total_attempts_new_order    = 0;
-
-      for (unsigned int i = 0; i < num_threads; ++i) {
-         cout << "[Client " << i
-              << "] commit_cnt: " << _tpcc_output[i].commit_cnt
-              << ", abort_cnt: " << _tpcc_output[i].abort_cnt << endl;
-         total_committed_cnt += _tpcc_output[i].commit_cnt;
-         total_aborted_cnt += _tpcc_output[i].abort_cnt;
-         total_aborted_cnt_payment += _tpcc_output[i].abort_cnt_payment;
-         total_aborted_cnt_new_order += _tpcc_output[i].abort_cnt_new_order;
-         total_attempts_payment += _tpcc_output[i].attempts_payment;
-         total_attempts_new_order += _tpcc_output[i].attempts_new_order;
-      }
-
-      cout << "# Transaction throughput (KTPS)" << endl;
-      cout << props["dbname"] << " TransactionalSplinterDB" << '\t'
-           << num_threads << '\t';
-      cout << total_committed_cnt / run_duration / 1000 << endl;
-      cout << "Run duration (sec):\t" << run_duration << endl;
-
-      cout << "# Abort count:\t" << total_aborted_cnt << '\n';
-      cout << "Abort rate:\t"
-           << (double)total_aborted_cnt
-                 / (total_aborted_cnt + total_committed_cnt)
-           << "\n";
-
-      cout << "# (Payment) Abort rate(%):\t"
-           << total_aborted_cnt_payment * 100.0 / total_aborted_cnt << '\n';
-      cout << "# (NewOrder) Abort rate(%):\t"
-           << total_aborted_cnt_new_order * 100.0 / total_aborted_cnt << '\n';
-
-      cout << "# (Payment) Failure rate(%):\t"
-           << total_aborted_cnt_payment * 100.0 / total_attempts_payment
-           << '\n';
-      cout << "# (NewOrder) Failure rate(%):\t"
-           << total_aborted_cnt_new_order * 100.0 / total_attempts_new_order
-           << '\n';
-
-      cout << "# (Payment) Total attempts:\t" << total_attempts_payment << '\n';
-      cout << "# (NewOrder) Total attempts:\t" << total_attempts_new_order
-           << '\n';
-
-      /*
-       * Print Latencies
-       */
-      std::vector<double> total_commit_txn_latencies;
-      std::vector<double> total_abort_txn_latencies;
-      for (unsigned int i = 0; i < num_threads; ++i) {
-         total_commit_txn_latencies.insert(
-            total_commit_txn_latencies.end(),
-            _tpcc_output[i].commit_txn_latencies.begin(),
-            _tpcc_output[i].commit_txn_latencies.end());
-         total_abort_txn_latencies.insert(
-            total_abort_txn_latencies.end(),
-            _tpcc_output[i].abort_txn_latencies.begin(),
-            _tpcc_output[i].abort_txn_latencies.end());
-      }
-
-      std::sort(total_commit_txn_latencies.begin(),
-                total_commit_txn_latencies.end());
-      std::sort(total_abort_txn_latencies.begin(),
-                total_abort_txn_latencies.end());
-
-      std::cout << "# Commit Latencies (us)" << std::endl;
-      PrintDistribution<double>(total_commit_txn_latencies);
-      std::cout << "# Abort Latencies (us)" << std::endl;
-      PrintDistribution<double>(total_abort_txn_latencies);
-
-      db->PrintDBStats();
    } else {
       db = ycsbc::DBFactory::CreateDB(props, load_workload.preloaded);
       if (!db) {
@@ -821,9 +831,6 @@ ParseCommandLine(int                         argc,
             exit(0);
          }
          props.SetProperty("benchmark", argv[argindex]);
-         argindex++;
-      } else if (strcmp(argv[argindex], "-upserts") == 0) {
-         tpcc::g_use_upserts = true;
          argindex++;
       } else if (strcmp(argv[argindex], "-client") == 0) {
          argindex++;
