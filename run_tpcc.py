@@ -208,7 +208,7 @@ def main(argc, argv):
     def parse():
         csv_path = f'{label}.csv'
         csv = open(csv_path, 'w')
-        print("system,conf,threads,goodput,aborts,abort_rate,payment_abort_rate, neworder_abort_rate, payment_failure_rate, neworder_failure_rate, payment_total_attempts, neworeder_total_attempts,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
+        print("system,conf,threads,goodput,aborts,abort_rate,payment_abort_rate, neworder_abort_rate, payment_failure_rate, neworder_failure_rate, payment_total_attempts, neworder_total_attempts,commit_latency_min,commit_latency_max,commit_latency_avg,commit_latency_p50,commit_latency_p90,commit_latency_p95,commit_latency_p99,commit_latency_p99.9,abort_latency_min,abort_latency_max,abort_latency_avg,abort_latency_p50,abort_latency_p90,abort_latency_p95,abort_latency_p99,abort_latency_p99.9,seq", file=csv)
         for i in range(0, num_repeats):
             log_path = f'/tmp/{label}.{i}.log'
             parseLogfile(log_path, csv, system, conf, i)
