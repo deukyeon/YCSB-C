@@ -21,27 +21,29 @@ uint32_t g_total_num_transactions = TOTAL_NUM_TRANSACTIONS;
 TPCCKey
 wKey(uint64_t w_id)
 {
-   return TPCCKey{.table = WAREHOUSE, .key1 = w_id};
+   return TPCCKey{.table = WAREHOUSE, .key1 = w_id, .key2 = 0};
 }
 
 TPCCKey
 iKey(uint64_t i_id)
 {
-   return TPCCKey{.table = ITEM, .key1 = i_id};
+   return TPCCKey{.table = ITEM, .key1 = i_id, .key2 = 0};
 }
 
 TPCCKey
 dKey(uint64_t d_id, uint64_t d_w_id)
 {
-   return TPCCKey{.table = DISTRICT, .key1 = d_w_id * DIST_PER_WARE + d_id};
+   return TPCCKey{
+      .table = DISTRICT, .key1 = d_w_id * DIST_PER_WARE + d_id, .key2 = 0};
 }
 
 TPCCKey
 cKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id)
 {
    return TPCCKey{.table = CUSTOMER,
-                  .key1  = (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist
-                          + c_id};
+                  .key1 =
+                     (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist + c_id,
+                  .key2 = 0};
 }
 
 void
@@ -83,7 +85,8 @@ noKey(uint64_t w_id, uint64_t d_id, uint64_t o_id)
 TPCCKey
 sKey(uint64_t s_i_id, uint64_t s_w_id)
 {
-   return TPCCKey{.table = STOCK, .key1 = s_w_id * g_max_items + s_i_id};
+   return TPCCKey{
+      .table = STOCK, .key1 = s_w_id * g_max_items + s_i_id, .key2 = 0};
 }
 
 // HISTORY table does not really have a primary (unique) key, but we will use
@@ -92,8 +95,9 @@ TPCCKey
 hKey(uint64_t c_id, uint64_t c_d_id, uint64_t c_w_id)
 {
    return TPCCKey{.table = HISTORY,
-                  .key1  = (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist
-                          + c_id};
+                  .key1 =
+                     (c_w_id * DIST_PER_WARE + c_d_id) * g_cust_per_dist + c_id,
+                  .key2 = 0};
 }
 
 uint64_t
