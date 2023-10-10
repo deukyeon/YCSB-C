@@ -47,9 +47,11 @@ void
 TPCCTransaction::gen_new_order(uint64_t thd_id)
 {
    type      = TPCC_NEW_ORDER;
-   w_id      = thd_id % g_num_wh + 1;
-   d_id      = URand(1, DIST_PER_WARE, thd_id);
+   w_id      = c_w_id = thd_id % g_num_wh + 1;
+   d_id      = c_d_id = URand(1, DIST_PER_WARE, thd_id);
+   assert(d_id >= 1 && d_id <= DIST_PER_WARE);
    c_id      = NURand(1023, 1, g_cust_per_dist, thd_id);
+   assert(c_id >= 1 && c_id <= g_cust_per_dist);
    rbk       = URand(1, 100, thd_id);
    ol_cnt    = URand(5, MAX_OL_PER_ORDER, thd_id);
    o_entry_d = 2023;
