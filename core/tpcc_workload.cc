@@ -47,8 +47,8 @@ void
 TPCCTransaction::gen_new_order(uint64_t thd_id)
 {
    type      = TPCC_NEW_ORDER;
-   w_id      = c_w_id = thd_id % g_num_wh + 1;
-   d_id      = c_d_id = URand(1, DIST_PER_WARE, thd_id);
+   w_id      = thd_id % g_num_wh + 1;
+   d_id      = URand(1, DIST_PER_WARE, thd_id);
    assert(d_id >= 1 && d_id <= DIST_PER_WARE);
    c_id      = NURand(1023, 1, g_cust_per_dist, thd_id);
    assert(c_id >= 1 && c_id <= g_cust_per_dist);
@@ -717,7 +717,7 @@ TPCCWorkload::run_new_order(TPCCTransaction *txn)
       return ycsbc::DB::kErrorConflict;
 
    // get customer info
-   key = cKey(txn->c_id, txn->c_d_id, txn->c_w_id);
+   key = cKey(txn->c_id, txn->d_id, txn->w_id);
    if (_db->Read(t, &key, sizeof(TPCCKey), &c_r, sizeof(c_r))
        == ycsbc::DB::kErrorConflict)
       return ycsbc::DB::kErrorConflict;
