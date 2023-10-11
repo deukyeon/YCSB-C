@@ -560,7 +560,8 @@ tpcc::tpcc_merge_tuple_final(data_config const *cfg,
                              slice              key,
                              merge_accumulator *oldest_message)
 {
-   assert(0);
+   // assert(0);
+   return 0;
 }
 
 int
