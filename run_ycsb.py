@@ -106,7 +106,7 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             fields = line.split()
             total_num_aborted_txns.append(fields[-1])
 
-        if line.startswith("# Abort count"):
+        if line.startswith("# Abort count:"):
             fields = line.split()
             abort_counts.append(fields[-1])
 

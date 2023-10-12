@@ -82,7 +82,7 @@ def parseLogfile(logfile_path, csv, system, conf, seq):
             run_tputs.append(fields[-1])
             run_data = False
 
-        if line.startswith("# Abort count"):
+        if line.startswith("# Abort count:"):
             fields = line.split()
             abort_counts.append(fields[-1])
 
