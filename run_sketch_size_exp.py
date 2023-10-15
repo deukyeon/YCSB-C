@@ -9,10 +9,11 @@ import subprocess
 def print_help():
     print("\t-h,--help: Print this help message", file=sys.stderr)
     print("\t-p,--parse [results path]: Parse the results in the given directory", file=sys.stderr)
+    print("\t-l,--label [results label]: Specify a label for the experiment", file=sys.stderr)
     exit(1)
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hp:", ["help", "parse="])
+    opts, args = getopt.getopt(sys.argv[1:], "hp:l:", ["help", "parse=", "label="])
 except getopt.GetoptError as err:
     print_help()
 
@@ -37,11 +38,11 @@ def parse_result(results_path):
             if line.startswith("# Transaction throughput (KTPS)"):
                 run_data = True
 
-            if line.startswith("# Abort count"):
+            if line.startswith("# Abort count:"):
                 fields = line.split()
                 abort_counts = fields[-1]
 
-            if line.startswith("Abort rate"):
+            if line.startswith("Abort rate:"):
                 fields = line.split()
                 abort_rates = fields[-1]
 
@@ -61,12 +62,17 @@ def parse_result(results_path):
         print("\t".join(result), file=output)
     output.close()
 
+
+label = time.time()
+
 for o, a in opts:
     if o in ('-h', '--help'):
         print_help()
     if o in ('-p', '--parse'):
         parse_result(a)
         exit(0)
+    if o in ('-l', '--label'):
+        label = a
 
 
 def run_cmd(cmd):
@@ -79,23 +85,26 @@ results_path = os.path.join(ycsb_path, "sketch_size_exp")
 if not os.path.exists(results_path):
     os.mkdir(results_path)
 
-results_path = os.path.join(results_path, f"{time.time()}")
+results_path = os.path.join(results_path, f"{label}")
 os.mkdir(results_path)
 
 # assume the branch of splinterdb is deukyeon/fantastiCC-refactor
 os.chdir(splinterdb_path)
 run_cmd("git checkout src/experimental_mode.h")
 run_cmd("sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_SKETCH 1/g' src/experimental_mode.h")
+# run_cmd("sed -i 's/#define EXPERIMENTAL_MODE_STO_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_STO_SKETCH 1/g' src/experimental_mode.h")
 
 os.environ['CC'] = "clang"
 os.environ['LD'] = "clang"
 
 max_size = 8 * 1024 * 1024
 rowsxcols = max_size // (128 // 8)
-for rows in [1, 2, 4]:
+for rows in [1, 2]:
     cols = rowsxcols // rows
-    while cols >= 1:
+    while (rows == 1 and cols == 1) or (rows == 2 and cols >= 1):
         os.chdir(splinterdb_path)
+        # run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/transaction_sto.h")
+        # run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/transaction_sto.h")
         run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/transaction_tictoc_sketch.h")
         run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/transaction_tictoc_sketch.h")
         run_cmd("sudo -E make clean")
@@ -109,10 +118,12 @@ for rows in [1, 2, 4]:
         run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
                 -db transactional_splinterdb \
                 -threads 60 \
+                -client txn \
+                -benchmark_seconds 60 \
                 -L workloads/read_intensive.spec \
                 -W workloads/read_intensive.spec \
                 -p splinterdb.filename /dev/md0 \
-                -p splinterdb.cache_size_mb 4096 \
+                -p splinterdb.cache_size_mb 6144 \
                 > {output_path} 2>&1")
 
         cols = cols // 2

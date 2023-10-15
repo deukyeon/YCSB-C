@@ -12,6 +12,6 @@ readmodifywriteproportion=0
 theta=0.99
 opspertransaction=16
 maxtxncount=100000
-maxtxnretry=0
-mintxnabortpaneltyus=0
+maxtxnretry=5
+mintxnabortpaneltyus=2000
 

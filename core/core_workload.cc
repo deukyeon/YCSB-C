@@ -121,7 +121,7 @@ CoreWorkload::InitLoadWorkload(const utils::Properties &p,
       std::stoi(p.GetProperty(FIELD_COUNT_PROPERTY, FIELD_COUNT_DEFAULT));
    field_len_generator_ = GetFieldLenGenerator(p);
 
-   record_count_ = std::stoi(p.GetProperty(RECORD_COUNT_PROPERTY));
+   record_count_ = std::stol(p.GetProperty(RECORD_COUNT_PROPERTY));
 
    zero_padding_ =
       std::stoi(p.GetProperty(ZERO_PADDING_PROPERTY, ZERO_PADDING_DEFAULT));

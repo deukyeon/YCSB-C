@@ -533,7 +533,7 @@ main(const int argc, const char *argv[])
       }
 
       record_count =
-         stoi(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
+         stol(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
       uint64_t batch_size = sqrt(record_count);
       if (record_count / batch_size < num_threads)
          batch_size = record_count / num_threads;
