@@ -18,7 +18,8 @@ available_systems = [
     'sto-memory',
     '2pl-no-wait',
     '2pl-wait-die',
-    '2pl-wound-wait'
+    '2pl-wound-wait',
+    'mvcc-disk',
 ]
 
 system_branch_map = {
@@ -37,7 +38,8 @@ system_branch_map = {
     'sto-memory': 'deukyeon/fantastiCC-refactor',
     '2pl-no-wait': 'deukyeon/fantastiCC-refactor',
     '2pl-wait-die': 'deukyeon/fantastiCC-refactor',
-    '2pl-wound-wait': 'deukyeon/fantastiCC-refactor'
+    '2pl-wound-wait': 'deukyeon/fantastiCC-refactor',
+    'mvcc-disk': 'deukyeon/fantastiCC-refactor',
 }
 
 system_sed_map = {
@@ -53,12 +55,13 @@ system_sed_map = {
     'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_STO_COUNTER 1/g' src/experimental_mode.h"],
     '2pl-no-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_NO_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_NO_WAIT 1/g' src/experimental_mode.h"],
     '2pl-wait-die': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE [ ]*0/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE 1/g' src/experimental_mode.h"],
-    '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"]
+    '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"],
+    'mvcc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_DISK [ ]*0/#define EXPERIMENTAL_MODE_MVCC_DISK 1/g' src/experimental_mode.h"]
 }
 
 class ExpSystem:
     @staticmethod
-    def build(sys, splinterdb_dir):
+    def build(sys, splinterdb_dir, backup=True):
 
 
         def run_cmd(cmd):
@@ -68,9 +71,10 @@ class ExpSystem:
         os.environ['CC'] = 'clang'
         os.environ['LD'] = 'clang'
         current_dir = os.getcwd()
-        run_cmd(f'tar czf splinterdb-backup-{time.time()}.tar.gz {splinterdb_dir}')
+        if backup:
+            run_cmd(f'tar czf splinterdb-backup-{time.time()}.tar.gz {splinterdb_dir}')
         os.chdir(splinterdb_dir)
-        run_cmd('git checkout -- .')
+        run_cmd('git checkout -- src/experimental_mode.h')
         run_cmd(f'git checkout {system_branch_map[sys]}')
         run_cmd('sudo -E make clean')
         if sys in system_sed_map:

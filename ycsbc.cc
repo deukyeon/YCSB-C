@@ -348,7 +348,7 @@ DelegateTPCCClient(uint32_t thread_id, TPCCInput *input, TPCCOutput *stats)
 void
 bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
 {
-   // !This should be modified depending on machine
+#warning "This should be modified depending on machine"
    const size_t numa_node = 0;
    size_t       numa_local_index =
       thr_i % 2 == 0 ? thr_i / 2
