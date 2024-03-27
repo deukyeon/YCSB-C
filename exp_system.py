@@ -20,6 +20,7 @@ available_systems = [
     '2pl-wait-die',
     '2pl-wound-wait',
     'mvcc-disk',
+    'mvcc-memory'
 ]
 
 system_branch_map = {
@@ -40,6 +41,7 @@ system_branch_map = {
     '2pl-wait-die': 'deukyeon/fantastiCC-refactor',
     '2pl-wound-wait': 'deukyeon/fantastiCC-refactor',
     'mvcc-disk': 'deukyeon/fantastiCC-refactor',
+    'mvcc-memory': 'deukyeon/fantastiCC-refactor',
 }
 
 system_sed_map = {
@@ -56,7 +58,8 @@ system_sed_map = {
     '2pl-no-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_NO_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_NO_WAIT 1/g' src/experimental_mode.h"],
     '2pl-wait-die': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE [ ]*0/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE 1/g' src/experimental_mode.h"],
     '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"],
-    'mvcc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_DISK [ ]*0/#define EXPERIMENTAL_MODE_MVCC_DISK 1/g' src/experimental_mode.h"]
+    'mvcc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_DISK [ ]*0/#define EXPERIMENTAL_MODE_MVCC_DISK 1/g' src/experimental_mode.h"],
+    'mvcc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MVCC_MEMORY 1/g' src/experimental_mode.h"],
 }
 
 class ExpSystem:
@@ -80,7 +83,7 @@ class ExpSystem:
         if sys in system_sed_map:
             for sed in system_sed_map[sys]:
                 run_cmd(sed)
-        run_cmd('sudo -E make install')
+        run_cmd('sudo -E make -j16 install')
         run_cmd('sudo ldconfig')
         os.chdir(current_dir)
         run_cmd('make clean')
