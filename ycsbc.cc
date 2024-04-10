@@ -607,14 +607,12 @@ main(const int argc, const char *argv[])
       uint64_t ops_per_transactions = 1;
       // Perform any Run phases
       for (const auto &workload : run_workloads) {
-         unsigned int num_run_threads = stoi(
-            workload.props.GetProperty("threads", std::to_string(num_threads)));
          std::vector<std::thread> run_threads;
-         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
             run_threads.emplace_back(std::thread(
-               [&wls = wls, &workload = workload, num_run_threads, thr_i]() {
+               [&wls = wls, &workload = workload, num_threads, thr_i]() {
                   wls[thr_i].InitRunWorkload(
-                     workload.props, num_run_threads, thr_i);
+                     workload.props, num_threads, thr_i);
                }));
             bind_to_cpu(run_threads, thr_i);
          }
@@ -631,20 +629,20 @@ main(const int argc, const char *argv[])
             ycsbc::CoreWorkload::MAX_TXN_COUNT_PROPERTY, "0"));
          total_ops =
             max_txn_count > 0
-               ? max_txn_count * num_run_threads * ops_per_transactions
+               ? max_txn_count * num_threads * ops_per_transactions
                : stoi(workload
                          .props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
          uint64_t              run_progress = 0;
          uint64_t              last_printed = 0;
-         YCSBInput             ycsb_inputs[num_run_threads];
-         YCSBOutput            ycsb_outputs[num_run_threads];
+         YCSBInput             ycsb_inputs[num_threads];
+         YCSBOutput            ycsb_outputs[num_threads];
          std::atomic<uint64_t> num_clients_done(0);
 
          timer.Start();
          {
-            for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
-               uint64_t start_op = (total_ops * thr_i) / num_run_threads;
-               uint64_t end_op   = (total_ops * (thr_i + 1)) / num_run_threads;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               uint64_t start_op = (total_ops * thr_i) / num_threads;
+               uint64_t end_op   = (total_ops * (thr_i + 1)) / num_threads;
                uint64_t num_transactions =
                   (end_op - start_op) / ops_per_transactions;
                ycsb_inputs[thr_i].db                = db;
@@ -658,7 +656,7 @@ main(const int argc, const char *argv[])
                ycsb_inputs[thr_i].benchmark_seconds =
                   stof(props.GetProperty("benchmark_seconds", "0"));
                ycsb_inputs[thr_i].global_num_clients_done = &num_clients_done;
-               ycsb_inputs[thr_i].total_num_clients       = num_run_threads;
+               ycsb_inputs[thr_i].total_num_clients       = num_threads;
 
                run_threads.emplace_back(
                   std::thread(props.GetProperty("client") == "txn"
@@ -680,14 +678,14 @@ main(const int argc, const char *argv[])
             cout << "\n";
          }
 
-         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
             wls[thr_i].DeinitRunWorkload();
          }
 
          total_txn_count           = 0;
          uint64_t total_commit_cnt = 0;
          uint64_t total_abort_cnt  = 0;
-         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
             cout << "[Client " << thr_i
                  << "] commit_cnt: " << ycsb_outputs[thr_i].commit_cnt
                  << ", abort_cnt: " << ycsb_outputs[thr_i].abort_cnt << endl;
@@ -701,7 +699,7 @@ main(const int argc, const char *argv[])
               << total_txn_count - total_commit_cnt << endl;
          cout << "# Transaction throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << workload.filename << '\t'
-              << num_run_threads << '\t';
+              << num_threads << '\t';
          cout << total_commit_cnt / run_duration / 1000 << endl;
          cout << "Run duration (sec):\t" << run_duration << endl;
          cout << "# Abort count:\t" << total_abort_cnt << '\n';
@@ -713,7 +711,7 @@ main(const int argc, const char *argv[])
           */
          std::vector<double> total_commit_txn_latencies;
          std::vector<double> total_abort_txn_latencies;
-         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
             total_commit_txn_latencies.insert(
                total_commit_txn_latencies.end(),
                ycsb_outputs[thr_i].commit_txn_latencies.begin(),
@@ -738,7 +736,7 @@ main(const int argc, const char *argv[])
           * Print abort count per transaction
           */
          std::vector<unsigned long> total_abort_cnt_per_txn;
-         for (thr_i = 0; thr_i < num_run_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
             total_abort_cnt_per_txn.insert(
                total_abort_cnt_per_txn.end(),
                ycsb_outputs[thr_i].abort_cnt_per_txn.begin(),

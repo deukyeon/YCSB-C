@@ -94,14 +94,14 @@ def main(argc, argv):
 
     cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so \
         ./ycsbc -db {db} -threads {threads} -benchmark_seconds {run_seconds} -client txn \
-        -P {spec_file} -W {spec_file} \
+        -L {spec_file} -W {spec_file} \
         -p splinterdb.filename {dev_name} \
         -p splinterdb.cache_size_mb {cache_size_mb} \
         -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
         -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
 
     # run load phase
-    os.system(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {max_num_threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb {cache_size_mb}')
+    # os.system(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb {cache_size_mb}')
     os.system(cmd)
     
 if __name__ == '__main__':
