@@ -100,7 +100,7 @@ def main(argc, argv):
         -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
         -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
 
-    # run load phase
+    print(cmd)
     os.system(cmd)
     
 if __name__ == '__main__':
