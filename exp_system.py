@@ -20,7 +20,9 @@ available_systems = [
     '2pl-wait-die',
     '2pl-wound-wait',
     'mvcc-disk',
-    'mvcc-memory'
+    'mvcc-memory',
+    'mvcc-counter',
+    'mvcc-sketch'
 ]
 
 system_branch_map = {
@@ -42,6 +44,8 @@ system_branch_map = {
     '2pl-wound-wait': 'deukyeon/fantastiCC-refactor',
     'mvcc-disk': 'deukyeon/fantastiCC-refactor',
     'mvcc-memory': 'deukyeon/fantastiCC-refactor',
+    'mvcc-counter': 'deukyeon/fantastiCC-refactor',
+    'mvcc-sketch': 'deukyeon/fantastiCC-refactor',
 }
 
 system_sed_map = {
@@ -60,6 +64,8 @@ system_sed_map = {
     '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"],
     'mvcc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_DISK [ ]*0/#define EXPERIMENTAL_MODE_MVCC_DISK 1/g' src/experimental_mode.h"],
     'mvcc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MVCC_MEMORY 1/g' src/experimental_mode.h"],
+    'mvcc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_MVCC_COUNTER 1/g' src/experimental_mode.h"],
+    'mvcc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_MVCC_SKETCH 1/g' src/experimental_mode.h"],
 }
 
 class ExpSystem:

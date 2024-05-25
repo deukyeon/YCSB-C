@@ -23,11 +23,12 @@ def main(argc, argv):
     cache_size_mb = 4096
     run_seconds = 0
 
-    opts, _ = getopt.getopt(sys.argv[1:], 's:w:t:d:bc:r:h', 
-                            ['system=', 'workload=', 'threads=', 'dbfile=', 'bgthreads', 'cachesize=', 'run_seconds=', 'help'])
+    opts, _ = getopt.getopt(sys.argv[1:], 's:w:t:d:bc:r:gh', 
+                            ['system=', 'workload=', 'threads=', 'dbfile=', 'bgthreads', 'cachesize=', 'run_seconds=', 'gdb', 'help'])
     system = None
     conf = None
     dev_name = '/dev/md0'
+    gdb_cmd = ''
 
     for opt, arg in opts:
         if opt in ('-s', '--system'):
@@ -53,6 +54,8 @@ def main(argc, argv):
             cache_size_mb = int(arg)
         elif opt in ('-r', '--run_seconds'):
             run_seconds = float(arg)
+        elif opt in ('-g', '--gdb'):
+            gdb_cmd = 'gdb -ex=r --args'
         elif opt in ('-h', '--help'):
             printHelp()
 
@@ -93,7 +96,7 @@ def main(argc, argv):
         num_memtable_bg_threads = 0
 
     cmd = f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so \
-        ./ycsbc -db {db} -threads {threads} -benchmark_seconds {run_seconds} -client txn \
+        {gdb_cmd} ./ycsbc -db {db} -threads {threads} -benchmark_seconds {run_seconds} -client txn \
         -L {spec_file} -W {spec_file} \
         -p splinterdb.filename {dev_name} \
         -p splinterdb.cache_size_mb {cache_size_mb} \
