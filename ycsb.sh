@@ -14,7 +14,7 @@ do
         do 
             for run in {1..${NRUNS}}
             do
-                ./ycsb.py -s $sys -w ${work} -t 60 -c 6144 -r 60 > $HOME/${sys}_${work}_${thr}_${run}.log
+                ./ycsb.py -s $sys -w ${work} -t $thr -c 6144 -r 60 > $HOME/${sys}_${work}_${thr}_${run}.log
             done
         done
     done
