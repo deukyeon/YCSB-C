@@ -12,7 +12,7 @@ do
     do
         for work in ${WORKLOADS[@]}
         do 
-            for run in {1..${NRUNS}}
+            for run in $(seq 1 ${NRUNS})
             do
                 ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 60 > $HOME/${sys}_${work}_${thr}_${run}.log
             done
