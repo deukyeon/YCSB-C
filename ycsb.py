@@ -101,7 +101,10 @@ def main(argc, argv):
         -p splinterdb.filename {dev_name} \
         -p splinterdb.cache_size_mb {cache_size_mb} \
         -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
-        -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
+        -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads} \
+        -p splinterdb.disable_upsert 1'
+        
+    # cmd += ' -p splinterdb.cache_use_stats 1 -p splinterdb.use_stats 1'
 
     # run load phase
     # os.system(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb {cache_size_mb}')

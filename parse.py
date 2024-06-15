@@ -105,18 +105,24 @@ def generateOutputFile(input, output=sys.stdout):
     df = df.select_dtypes(include=np.number)
     df = df.groupby(by='threads').agg('mean')
     print(df.to_string(), file=output)
+    
+    
+input_dir = sys.argv[1]
+output_dir = sys.argv[2]
 
 # Example usage
-for system in ['mvcc-memory', 'mvcc-counter', 'mvcc-sketch']:
-    input_file_paths = []
-    for thr in [1] + list(range(4, 64, 4)):
-        for seq in [1, 2]:
-            input_file_paths.append(f'{system}_write_intensive_{thr}_{seq}.log')
-    output_file_path = f'{system}.csv'  # Replace with the path to your output CSV file
+for system in ['2pl-no-wait', 'baseline-serial', 'baseline-parallel', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter']:
+    # mvcc-disk will be added later.
+    for workload in ['write_intensive', 'read_intensive']:
+        input_file_paths = []
+        for thr in [1] + list(range(4, 64, 4)):
+            for seq in [1, 2]:
+                input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log')
+        output_file_path = f'{output_dir}/{system}.csv'  # Replace with the path to your output CSV file
 
-    results = [parse_input_file(file_path) for file_path in input_file_paths]
-    write_to_csv(results, output_file_path)
+        results = [parse_input_file(file_path) for file_path in input_file_paths]
+        write_to_csv(results, output_file_path)
 
-    with open(f'{system}-write_intensive', 'w') as out:
-        generateOutputFile(output_file_path, out)
+        with open(f'{output_dir}/{system}-{workload}', 'w') as out:
+            generateOutputFile(output_file_path, out)
 
