@@ -25,4 +25,4 @@ do
 done
 
 mkdir -p $OUTPUT_DIR
-python parse.py $LOG_DIR $OUTPUT_DIR
+python3 parse.py $LOG_DIR $OUTPUT_DIR
