@@ -118,7 +118,7 @@ for system in ['2pl-no-wait', 'baseline-serial', 'baseline-parallel', 'sto-disk'
         for thr in [1] + list(range(4, 64, 4)):
             for seq in [1, 2]:
                 input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log')
-        output_file_path = f'{output_dir}/{system}.csv'  # Replace with the path to your output CSV file
+        output_file_path = f'{output_dir}/{system}-{workload}.csv'  # Replace with the path to your output CSV file
 
         results = [parse_input_file(file_path) for file_path in input_file_paths]
         write_to_csv(results, output_file_path)
