@@ -593,12 +593,12 @@ main(const int argc, const char *argv[])
             cout << "\n";
          }
          total_txn_count = 0;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads_load; ++thr_i) {
             total_txn_count += ycsb_outputs[thr_i].txn_cnt;
          }
          cout << "# Load throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << load_workload.filename << '\t'
-              << num_threads << '\t';
+              << num_threads_load << '\t';
          cout << total_txn_count / load_duration / 1000 << endl;
          cout << "Load duration (sec):\t" << load_duration << endl;
 
