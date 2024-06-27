@@ -42,7 +42,7 @@ system_branch_map = {
     '2pl-no-wait': 'deukyeon/fantastiCC-refactor',
     '2pl-wait-die': 'deukyeon/fantastiCC-refactor',
     '2pl-wound-wait': 'deukyeon/fantastiCC-refactor',
-    'mvcc-disk': 'deukyeon/fantastiCC-refactor',
+    'mvcc-disk': 'robj/fantastiCC-refactor-bugfix',
     'mvcc-memory': 'deukyeon/fantastiCC-refactor',
     'mvcc-counter': 'deukyeon/fantastiCC-refactor',
     'mvcc-sketch': 'deukyeon/fantastiCC-refactor',

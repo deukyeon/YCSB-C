@@ -348,17 +348,17 @@ DelegateTPCCClient(uint32_t thread_id, TPCCInput *input, TPCCOutput *stats)
 void
 bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
 {
-   //#warning "This should be modified depending on machine"
-   // const size_t numa_node = 0;
-   // size_t       numa_local_index =
-   //    thr_i % 2 == 0 ? thr_i / 2
-   //                         : (thr_i / 2) +
-   //                         numautils::num_lcores_per_numa_node() / 2;
-   // size_t bound_core_num =
-   //    numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
-   // (void)bound_core_num;
-   // std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
-   // std::endl;
+   #warning "This should be modified depending on machine"
+   const size_t numa_node = 0;
+   size_t       numa_local_index =
+      thr_i % 2 == 0 ? thr_i / 2
+                           : (thr_i / 2) +
+                           numautils::num_lcores_per_numa_node() / 2;
+   size_t bound_core_num =
+      numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
+   (void)bound_core_num;
+   std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
+   std::endl;
 }
 
 template<typename T>
@@ -533,38 +533,39 @@ main(const int argc, const char *argv[])
          exit(0);
       }
 
+      const uint64_t num_threads_load = 60;
       record_count =
          stol(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
       uint64_t batch_size = sqrt(record_count);
-      if (record_count / batch_size < num_threads)
-         batch_size = record_count / num_threads;
+      if (record_count / batch_size < num_threads_load)
+         batch_size = record_count / num_threads_load;
       if (batch_size < 1)
          batch_size = 1;
 
       ycsbc::BatchedCounterGenerator key_generator(
          load_workload.preloaded ? record_count : 0, batch_size);
-      ycsbc::CoreWorkload wls[num_threads];
+      ycsbc::CoreWorkload wls[num_threads_load];
 
       unsigned int thr_i;
-      for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+      for (thr_i = 0; thr_i < num_threads_load; ++thr_i) {
          wls[thr_i].InitLoadWorkload(
-            load_workload.props, num_threads, thr_i, &key_generator);
+            load_workload.props, num_threads_load, thr_i, &key_generator);
       }
 
       // Perform the Load phase
       if (!load_workload.preloaded) {
          std::vector<std::thread> load_threads;
-         YCSBInput                ycsb_inputs[num_threads];
-         YCSBOutput               ycsb_outputs[num_threads];
+         YCSBInput                ycsb_inputs[num_threads_load];
+         YCSBOutput               ycsb_outputs[num_threads_load];
 
          timer.Start();
          {
             cout << "# Loading records:\t" << record_count << endl;
             uint64_t load_progress = 0;
             uint64_t last_printed  = 0;
-            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-               uint64_t start_op = (record_count * thr_i) / num_threads;
-               uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads;
+            for (thr_i = 0; thr_i < num_threads_load; ++thr_i) {
+               uint64_t start_op = (record_count * thr_i) / num_threads_load;
+               uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads_load;
                ycsb_inputs[thr_i].db                = db;
                ycsb_inputs[thr_i].wl                = &wls[thr_i];
                ycsb_inputs[thr_i].num_ops           = end_op - start_op;
@@ -592,12 +593,12 @@ main(const int argc, const char *argv[])
             cout << "\n";
          }
          total_txn_count = 0;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+         for (thr_i = 0; thr_i < num_threads_load; ++thr_i) {
             total_txn_count += ycsb_outputs[thr_i].txn_cnt;
          }
          cout << "# Load throughput (KTPS)" << endl;
          cout << props["dbname"] << '\t' << load_workload.filename << '\t'
-              << num_threads << '\t';
+              << num_threads_load << '\t';
          cout << total_txn_count / load_duration / 1000 << endl;
          cout << "Load duration (sec):\t" << load_duration << endl;
 
