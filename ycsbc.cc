@@ -358,7 +358,7 @@ bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
       numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
    (void)bound_core_num;
    std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
-   // std::endl;
+   std::endl;
 }
 
 template<typename T>
