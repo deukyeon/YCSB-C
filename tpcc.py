@@ -113,7 +113,7 @@ def main(argc, argv):
         -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads}'
 
     if dev_name.startswith('/dev/'):
-        cmd += f' -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) / (1024**3)}'
+        cmd += f' -p splinterdb.disk_size_gb {(get_device_size_bytes(dev_name) // (1024**3))}'
 
     print(cmd)
     os.system(cmd)
