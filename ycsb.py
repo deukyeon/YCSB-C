@@ -18,6 +18,18 @@ def printHelp():
     print("\t-h,--help: Print this help message", file=sys.stderr)
     exit(1)
 
+
+def get_device_size_bytes(device: str) -> int:
+    import subprocess
+    output = subprocess.run(
+        ["lsblk", device, "--output", "SIZE", "--bytes", "--noheadings", "--nodeps"],
+        capture_output=True,
+        check=True,
+    )
+    size = int(output.stdout.decode())
+    return size
+
+
 def main(argc, argv):
     enable_bgthreads = False
     cache_size_mb = 4096
@@ -104,6 +116,8 @@ def main(argc, argv):
         -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads} \
         -p splinterdb.disable_upsert 1'
         
+    if dev_name.startswith('/dev/'):
+        cmd += f' -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) / (1024**3)}'
     # cmd += ' -p splinterdb.cache_use_stats 1 -p splinterdb.use_stats 1'
 
     # run load phase
