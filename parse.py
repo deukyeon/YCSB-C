@@ -111,7 +111,7 @@ input_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
 # Example usage
-for system in ['2pl-no-wait', 'baseline-serial', 'baseline-parallel', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter']:
+for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter']:
     # mvcc-disk will be added later.
     for workload in ['write_intensive', 'read_intensive']:
         input_file_paths = []

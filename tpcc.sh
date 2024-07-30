@@ -1,12 +1,14 @@
 #!/usr/bin/bash -x
 
-SYSTEMS=(2pl-no-wait baseline-serial baseline-parallel sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch)
+SYSTEMS=(2pl-no-wait occ-serial occ-parallel sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch)
 #  mvcc-memory mvcc-sketch mvcc-counter mvcc-disk will be added later.
 WORKLOADS=(tpcc-wh4 tpcc-wh8 tpcc-wh16 tpcc-wh32 tpcc-wh4-upserts tpcc-wh8-upserts tpcc-wh16-upserts tpcc-wh32-upserts)
 NRUNS=2
 
 LOG_DIR=$HOME/tpcc_logs
 OUTPUT_DIR=$HOME/tpcc_results
+
+DEV=/dev/md0
 
 mkdir -p $LOG_DIR
 
@@ -18,7 +20,7 @@ do
 	do
             for run in $(seq 1 ${NRUNS})
             do
-                ./tpcc.py -s $sys -w $work -t $thr -c 6144 -r 60 -d /dev/md0 > $LOG_DIR/${sys}_${work}_${thr}_${run}.log
+                ./tpcc.py -s $sys -w $work -t $thr -c 6144 -r 60 -d $DEV > $LOG_DIR/${sys}_${work}_${thr}_${run}.log
             done
         done
     done

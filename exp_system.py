@@ -6,8 +6,8 @@ available_systems = [
     'splinterdb',
     'tictoc-disk',
     'silo-disk',
-    'baseline-serial',
-    'baseline-parallel',
+    'occ-serial',
+    'occ-parallel',
     'silo-memory',
     'tictoc-memory',
     'tictoc-counter',
@@ -29,8 +29,8 @@ system_branch_map = {
     'splinterdb': 'deukyeon/mvcc-working-merge-main',
     'tictoc-disk': 'deukyeon/mvcc-working-merge-main',
     'silo-disk': 'deukyeon/mvcc-working-merge-main',
-    'baseline-serial': 'deukyeon/mvcc-working-merge-main',
-    'baseline-parallel': 'deukyeon/mvcc-working-merge-main',
+    'occ-serial': 'deukyeon/mvcc-working-merge-main',
+    'occ-parallel': 'deukyeon/mvcc-working-merge-main',
     'silo-memory': 'deukyeon/mvcc-working-merge-main',
     'tictoc-memory': 'deukyeon/mvcc-working-merge-main',
     'tictoc-counter': 'deukyeon/mvcc-working-merge-main',
@@ -50,8 +50,8 @@ system_branch_map = {
 }
 
 system_sed_map = {
-    'baseline-serial': ["sed -i 's/#define EXPERIMENTAL_MODE_KR_OCC [ ]*0/#define EXPERIMENTAL_MODE_KR_OCC 1/g' src/experimental_mode.h"],
-    'baseline-parallel': ["sed -i 's/#define EXPERIMENTAL_MODE_KR_OCC_PARALLEL [ ]*0/#define EXPERIMENTAL_MODE_KR_OCC_PARALLEL 1/g' src/experimental_mode.h"],
+    'occ-serial': ["sed -i 's/#define EXPERIMENTAL_MODE_KR_OCC [ ]*0/#define EXPERIMENTAL_MODE_KR_OCC 1/g' src/experimental_mode.h"],
+    'occ-parallel': ["sed -i 's/#define EXPERIMENTAL_MODE_KR_OCC_PARALLEL [ ]*0/#define EXPERIMENTAL_MODE_KR_OCC_PARALLEL 1/g' src/experimental_mode.h"],
     'silo-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_SILO_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_SILO_MEMORY 1/g' src/experimental_mode.h"],
     'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h"],
     'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h"],
