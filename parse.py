@@ -1,6 +1,7 @@
 import re
 import csv
 import sys
+import os
 
 # Function to parse the input file
 def parse_input_file(file_path):
@@ -111,13 +112,17 @@ input_dir = sys.argv[1]
 output_dir = sys.argv[2]
 
 # Example usage
-for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter']:
-    # mvcc-disk will be added later.
-    for workload in ['write_intensive', 'read_intensive']:
+for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter', 'mvcc-disk']:
+    for workload in ['write_intensive', 'read_intensive', 'write_intensive_medium', 'read_intensive_medium',
+                     'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh4-upserts', 'tpcc-wh8-upserts', 'tpcc-wh16-upserts', 'tpcc-wh32-upserts']:
         input_file_paths = []
         for thr in [1] + list(range(4, 64, 4)):
             for seq in [1, 2]:
-                input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log')
+                if os.path.exists(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log'):
+                    input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log')
+        if not input_file_paths:
+            continue
+
         output_file_path = f'{output_dir}/{system}-{workload}.csv'  # Replace with the path to your output CSV file
 
         results = [parse_input_file(file_path) for file_path in input_file_paths]
