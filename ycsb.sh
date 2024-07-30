@@ -20,7 +20,7 @@ do
 	do
             for run in $(seq 1 ${NRUNS})
             do
-                ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 60 -d $DEV > $LOG_DIR/${sys}_${work}_${thr}_${run}.log
+                ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 60 -d $DEV | tee $LOG_DIR/${sys}_${work}_${thr}_${run}.log
             done
         done
     done
