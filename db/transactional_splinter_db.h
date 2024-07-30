@@ -131,12 +131,16 @@ private:
 
 class SplinterDBTransaction : public Transaction {
 public:
-   SplinterDBTransaction() : Transaction(){};
+   SplinterDBTransaction() : Transaction(){
+       handle = transaction_create();
+   };
 
-   ~SplinterDBTransaction(){};
+   ~SplinterDBTransaction(){
+       transaction_destroy(handle);
+   };
 
 private:
-   transaction handle;
+   transaction *handle;
 
    friend TransactionalSplinterDB;
 };
