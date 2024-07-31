@@ -345,22 +345,6 @@ DelegateTPCCClient(uint32_t thread_id, TPCCInput *input, TPCCOutput *stats)
    return 0;
 }
 
-void
-bind_to_cpu(std::vector<std::thread> &threads, size_t thr_i)
-{
-   #warning "This should be modified depending on machine"
-   const size_t numa_node = 0;
-   size_t       numa_local_index =
-      thr_i % 2 == 0 ? thr_i / 2
-                           : (thr_i / 2) +
-                           numautils::num_lcores_per_numa_node() / 2;
-   size_t bound_core_num =
-      numautils::bind_to_core(threads[thr_i], numa_node, numa_local_index);
-   (void)bound_core_num;
-   std::cout << "Bind Thread " << thr_i << " to " << bound_core_num <<
-   std::endl;
-}
-
 template<typename T>
 void
 PrintDistribution(std::vector<T> &data, std::ostream &out = std::cout)
@@ -402,6 +386,9 @@ main(const int argc, const char *argv[])
    uint64_t             total_txn_count;
    utils::Timer<double> timer;
 
+   // 60 is the max number of threads that splinterdb supports.
+   std::vector<size_t> cores = numautils::get_cores(60);
+
    ycsbc::DB *db;
    if (props.GetProperty("benchmark") == "tpcc") {
       db = new ycsbc::TransactionalSplinterDB(props,
@@ -431,7 +418,7 @@ main(const int argc, const char *argv[])
                _tpcc_inputs[i].total_num_clients       = num_threads;
                tpcc_threads.emplace_back(std::thread(
                   DelegateTPCCClient, i, &_tpcc_inputs[i], &_tpcc_output[i]));
-               bind_to_cpu(tpcc_threads, i);
+               numautils::bind_to_core(tpcc_threads[i], cores[i]);
             }
             for (auto &t : tpcc_threads) {
                t.join();
@@ -565,7 +552,8 @@ main(const int argc, const char *argv[])
             uint64_t last_printed  = 0;
             for (thr_i = 0; thr_i < num_threads_load; ++thr_i) {
                uint64_t start_op = (record_count * thr_i) / num_threads_load;
-               uint64_t end_op   = (record_count * (thr_i + 1)) / num_threads_load;
+               uint64_t end_op =
+                  (record_count * (thr_i + 1)) / num_threads_load;
                ycsb_inputs[thr_i].db                = db;
                ycsb_inputs[thr_i].wl                = &wls[thr_i];
                ycsb_inputs[thr_i].num_ops           = end_op - start_op;
@@ -582,7 +570,7 @@ main(const int argc, const char *argv[])
                               thr_i,
                               &ycsb_inputs[thr_i],
                               &ycsb_outputs[thr_i]));
-               bind_to_cpu(load_threads, thr_i);
+               numautils::bind_to_core(load_threads[thr_i], cores[thr_i]);
             }
             for (auto &t : load_threads) {
                t.join();
@@ -615,7 +603,7 @@ main(const int argc, const char *argv[])
                   wls[thr_i].InitRunWorkload(
                      workload.props, num_threads, thr_i);
                }));
-            bind_to_cpu(run_threads, thr_i);
+            numautils::bind_to_core(run_threads[thr_i], cores[thr_i]);
          }
          for (auto &t : run_threads) {
             t.join();
@@ -667,7 +655,7 @@ main(const int argc, const char *argv[])
                               &ycsb_inputs[thr_i],
                               &ycsb_outputs[thr_i]));
 
-               bind_to_cpu(run_threads, thr_i);
+               numautils::bind_to_core(run_threads[thr_i], cores[thr_i]);
             }
             for (auto &t : run_threads) {
                t.join();

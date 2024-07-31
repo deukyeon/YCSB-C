@@ -86,7 +86,7 @@ TransactionalSplinterDB::TransactionalSplinterDB(
       spl,
       (transaction_isolation_level)props.GetIntProperty(
          "splinterdb.isolation_level"));
-   if(stoi(props.GetProperty("splinterdb.disable_upsert", "0")) == 1) {
+   if (stoi(props.GetProperty("splinterdb.disable_upsert", "0")) == 1) {
       transactional_splinterdb_disable_upsert(spl);
    }
 }
