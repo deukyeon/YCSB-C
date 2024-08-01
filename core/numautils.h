@@ -14,16 +14,32 @@ namespace numautils {
 std::vector<size_t>
 get_cores(const int max_cpus_wanted)
 {
+   if (max_cpus_wanted > numa_num_configured_cpus()) {
+      throw std::runtime_error("Requested more CPUs than available");
+   }
    std::vector<size_t> cores;
    int                 num_cpus_per_node =
       numa_num_configured_cpus() / numa_num_configured_nodes();
-   for (int i = 0; cores.size() < max_cpus_wanted
-                   && cores.size() < numa_num_configured_cpus();)
+   bool use_single_node = (num_cpus_per_node >= max_cpus_wanted);
+   for (int i = 0; (int)cores.size() < max_cpus_wanted
+                   && (int)cores.size() < numa_num_configured_cpus();)
    {
       std::ifstream core_cpus_list_file("/sys/devices/system/cpu/cpu"
                                         + std::to_string(i)
                                         + "/topology/core_cpus_list");
-      if (core_cpus_list_file) {
+
+      std::ifstream physical_package_id_file("/sys/devices/system/cpu/cpu"
+                                             + std::to_string(i)
+                                             + "/topology/physical_package_id");
+      if (core_cpus_list_file && physical_package_id_file) {
+         if (use_single_node) {
+            int physical_package_id;
+            physical_package_id_file >> physical_package_id;
+            if (physical_package_id != 0) {
+               i++;
+               continue;
+            }
+         }
          // It assumes two cpus per core
          std::string line;
          std::getline(core_cpus_list_file, line);
@@ -37,17 +53,7 @@ get_cores(const int max_cpus_wanted)
          throw std::runtime_error("Failed to read core cpus list for CPU "
                                   + std::to_string(i));
       }
-
-      if (numa_num_configured_nodes() == 1) {
-         i++;
-      } else {
-         // If a node has enough cores, we use only the node.
-         if (num_cpus_per_node < max_cpus_wanted) {
-            i++;
-         } else {
-            i += 2;
-         }
-      }
+      i++;
    }
    return cores;
 }
