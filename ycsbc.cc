@@ -69,6 +69,7 @@ std::map<string, string> default_props = {
    {"splinterdb.reclaim_threshold", "0"},
    {"splinterdb.num_memtable_bg_threads", "0"},
    {"splinterdb.num_normal_bg_threads", "0"},
+   {"splinterdb.io_contexts_per_process", "0"},
 
    // Transaction isolation level isn't used for now
    {"splinterdb.isolation_level", "1"},
