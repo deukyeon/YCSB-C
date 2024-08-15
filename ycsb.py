@@ -114,7 +114,8 @@ def main(argc, argv):
         -p splinterdb.cache_size_mb {cache_size_mb} \
         -p splinterdb.num_normal_bg_threads {num_normal_bg_threads} \
         -p splinterdb.num_memtable_bg_threads {num_memtable_bg_threads} \
-        -p splinterdb.disable_upsert 1'
+        -p splinterdb.disable_upsert 1 \
+        -p splinterdb.io_contexts_per_process 64'
         
     if dev_name.startswith('/dev/'):
         cmd += f' -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)}'
