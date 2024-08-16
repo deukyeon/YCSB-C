@@ -99,13 +99,13 @@ def write_to_csv(results, output_file):
         writer.writerows(rows)
 
 
-def generateOutputFile(input, output=sys.stdout):
-    import pandas as pd
-    import numpy as np
-    df = pd.read_csv(input)
-    df = df.select_dtypes(include=np.number)
-    df = df.groupby(by='threads').agg('mean')
-    print(df.to_string(), file=output)
+# def generateOutputFile(input, output=sys.stdout):
+#     import pandas as pd
+#     import numpy as np
+#     df = pd.read_csv(input)
+#     df = df.select_dtypes(include=np.number)
+#     df = df.groupby(by='threads').agg('mean')
+#     print(df.to_string(), file=output)
     
     
 input_dir = sys.argv[1]
@@ -117,9 +117,8 @@ for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-mem
                      'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh4-upserts', 'tpcc-wh8-upserts', 'tpcc-wh16-upserts', 'tpcc-wh32-upserts']:
         input_file_paths = []
         for thr in [1] + list(range(4, 64, 4)):
-            for seq in [1, 2]:
-                if os.path.exists(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log'):
-                    input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{seq}.log')
+            if os.path.exists(f'{input_dir}/{system}_{workload}_{thr}.log'):
+                input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}.log')
         if not input_file_paths:
             continue
 
@@ -128,6 +127,6 @@ for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-mem
         results = [parse_input_file(file_path) for file_path in input_file_paths]
         write_to_csv(results, output_file_path)
 
-        with open(f'{output_dir}/{system}-{workload}', 'w') as out:
-            generateOutputFile(output_file_path, out)
+        # with open(f'{output_dir}/{system}-{workload}', 'w') as out:
+        #     generateOutputFile(output_file_path, out)
 

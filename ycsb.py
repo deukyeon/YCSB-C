@@ -121,6 +121,9 @@ def main(argc, argv):
         cmd += f' -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)}'
     # cmd += ' -p splinterdb.cache_use_stats 1 -p splinterdb.use_stats 1'
 
+    if system == 'mvcc-disk':
+        cmd += ' -w mintxnabortpaneltyus 30000'
+
     # run load phase
     # os.system(f'LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc -db {db} -threads {threads} -L {spec_file} -p splinterdb.filename {dev_name} -p splinterdb.cache_size_mb {cache_size_mb}')
     os.system(cmd)
