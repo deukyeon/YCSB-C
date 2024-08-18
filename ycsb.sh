@@ -17,6 +17,7 @@ do
     do
         for thr in 1 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
         do
+            [ -f "$LOG_DIR/${sys}_${work}_${thr}.log" ] && continue
             ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 240 -d $DEV | tee $LOG_DIR/${sys}_${work}_${thr}.log
         done
     done
