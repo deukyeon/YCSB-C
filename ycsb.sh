@@ -7,7 +7,7 @@ WORKLOADS=(write_intensive read_intensive write_intensive_medium read_intensive_
 LOG_DIR=$HOME/ycsb_logs
 OUTPUT_DIR=$HOME/ycsb_results
 
-DEV=/dev/md0
+DEV=/dev/nvme0n1
 
 mkdir -p $LOG_DIR
 
