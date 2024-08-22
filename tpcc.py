@@ -32,7 +32,7 @@ def get_device_size_bytes(device: str) -> int:
 
 def main(argc, argv):
     enable_bgthreads = False
-    cache_size_mb = 4096
+    cache_size_mb = 256
     run_seconds = 0
 
     opts, _ = getopt.getopt(sys.argv[1:], 's:w:t:d:bc:r:h', 
