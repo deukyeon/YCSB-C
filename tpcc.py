@@ -116,6 +116,9 @@ def main(argc, argv):
     if dev_name.startswith('/dev/'):
         cmd += f' -p splinterdb.disk_size_gb {(get_device_size_bytes(dev_name) // (1024**3))}'
 
+    if system == 'mvcc-disk':
+        cmd += ' -w abort_penalty_us 2000'
+
     print(cmd)
     os.system(cmd)
     
