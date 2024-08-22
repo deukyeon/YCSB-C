@@ -99,13 +99,16 @@ def write_to_csv(results, output_file):
         writer.writerows(rows)
 
 
-# def generateOutputFile(input, output=sys.stdout):
-#     import pandas as pd
-#     import numpy as np
-#     df = pd.read_csv(input)
-#     df = df.select_dtypes(include=np.number)
-#     df = df.groupby(by='threads').agg('mean')
-#     print(df.to_string(), file=output)
+def generateOutputFile(input, output=sys.stdout):
+    import pandas as pd
+    import numpy as np
+    df = pd.read_csv(input)
+    df = df.select_dtypes(include=np.number)
+    df = df.groupby(by='threads').agg('mean')
+    lines = df.to_string().split('\n')
+    lines[0] = df.index.name + '\t' + lines[0].lstrip()
+    del lines[1]
+    print('\n'.join(lines), file=output)
     
     
 input_dir = sys.argv[1]
@@ -127,6 +130,6 @@ for system in ['2pl-no-wait', 'occ-serial', 'occ-parallel', 'sto-disk', 'sto-mem
         results = [parse_input_file(file_path) for file_path in input_file_paths]
         write_to_csv(results, output_file_path)
 
-        # with open(f'{output_dir}/{system}-{workload}', 'w') as out:
-        #     generateOutputFile(output_file_path, out)
+        with open(f'{output_dir}/{system}-{workload}', 'w') as out:
+            generateOutputFile(output_file_path, out)
 
