@@ -23,7 +23,7 @@ do
             do
                 LOG_FILE=$LOG_DIR/${sys}_${work}_${thr}_${run}.log
                 [ -f "$LOG_FILE" ] && continue
-                ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 240 -d $DEV | tee $LOG_FILE
+                timeout 3600 ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 240 -d $DEV | tee $LOG_FILE
             done
         done
     done

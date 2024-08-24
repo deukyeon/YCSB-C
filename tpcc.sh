@@ -11,19 +11,30 @@ DEV=/dev/nvme0n1
 
 NRUNS=1
 
+CACHE_SIZE=256
+RUN_SEC=240
+
 mkdir -p $LOG_DIR
 
 for work in ${WORKLOADS[@]}
 do 
+    # [ $work == "tpcc-wh4" ] && CACHE_SIZE=296
+    # [ $work == "tpcc-wh8" ] && CACHE_SIZE=336
+    # [ $work == "tpcc-wh16" ] && CACHE_SIZE=416
+    # [ $work == "tpcc-wh32" ] && CACHE_SIZE=576
+    # [ $work == "tpcc-wh4-upserts" ] && CACHE_SIZE=296
+    # [ $work == "tpcc-wh8-upserts" ] && CACHE_SIZE=336
+    # [ $work == "tpcc-wh16-upserts" ] && CACHE_SIZE=416
+    # [ $work == "tpcc-wh32-upserts" ] && CACHE_SIZE=576
     for sys in ${SYSTEMS[@]}
     do
-	for thr in 1 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
-	do
+        for thr in 1 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
+        do
             for run in $(seq 1 ${NRUNS})
             do
                 LOG_FILE=$LOG_DIR/${sys}_${work}_${thr}_${run}.log
                 [ -f "$LOG_FILE" ] && continue
-                ./tpcc.py -s $sys -w $work -t $thr -c 256 -r 240 -d $DEV | tee $LOG_FILE
+                timeout $((RUN_SEC+600)) ./tpcc.py -s $sys -w $work -t $thr -c $CACHE_SIZE -r $RUN_SEC -d $DEV | tee $LOG_FILE
             done
         done
     done
