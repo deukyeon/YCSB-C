@@ -117,7 +117,20 @@ def main(argc, argv):
         cmd += f' -p splinterdb.disk_size_gb {(get_device_size_bytes(dev_name) // (1024**3))}'
 
     if system == 'mvcc-disk':
-        cmd += ' -w abort_penalty_us 2000'
+        # if conf.startswith('tpcc-wh4'):
+        #     abort_penalty_us = 3000
+        # elif conf.startswith('tpcc-wh8'):
+        #     abort_penalty_us = 6000
+        # elif conf.startswith('tpcc-wh16'):
+        #     abort_penalty_us = 12000
+        # elif conf.startswith('tpcc-wh32'):
+        #     abort_penalty_us = 24000
+        # else:
+        #     assert False, f'Invalid workload {conf}'
+        abort_penalty_us = 4000
+    else:
+        abort_penalty_us = 300
+    cmd += f' -w abort_penalty_us {abort_penalty_us}'
 
     print(cmd)
     os.system(cmd)
