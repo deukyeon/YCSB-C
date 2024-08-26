@@ -19,7 +19,7 @@ do
     do
         for thr in 1 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
         do
-            for run in {0..$NRUNS}
+            for run in $(seq 1 ${NRUNS})
             do
                 LOG_FILE=$LOG_DIR/${sys}_${work}_${thr}_${run}.log
                 [ -f "$LOG_FILE" ] && continue
