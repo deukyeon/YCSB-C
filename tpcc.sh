@@ -27,7 +27,7 @@ do
     # [ $work == "tpcc-wh32-upserts" ] && CACHE_SIZE=576
     for sys in ${SYSTEMS[@]}
     do
-        for thr in 1 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
+        for thr in 1 2 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
         do
             for run in $(seq 1 ${NRUNS})
             do
