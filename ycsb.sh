@@ -14,7 +14,7 @@ mkdir -p $LOG_DIR
 
 for work in ${WORKLOADS[@]}
 do 
-    for sys in "${SYSTEMS[@]}"
+    for sys in ${SYSTEMS[@]}
     do
         for thr in 1 2 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
         do
