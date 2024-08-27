@@ -60,7 +60,6 @@ def parse_result(results_path):
         print("\t".join(result), file=output)
     output.close()
 
-
 for o, a in opts:
     if o in ('-h', '--help'):
         print_help()
@@ -74,10 +73,6 @@ def run_cmd(cmd):
 ycsb_path = os.getcwd()
 splinterdb_path = os.path.abspath("../splinterdb")
 
-results_path = os.path.join(ycsb_path, "~/sketch_size_exp")
-if not os.path.exists(results_path):
-    os.mkdir(results_path)
-
 def get_device_size_bytes(device: str) -> int:
     import subprocess
     output = subprocess.run(
@@ -90,8 +85,9 @@ def get_device_size_bytes(device: str) -> int:
 
 
 def run(system, workload, num_threads):
-    results_path = os.path.join(results_path, f"{system}-{workload}-{num_threads}")
-    os.mkdir(results_path)
+    os.makedirs("sketch_exp_results", exist_ok=True)
+    results_path = f"sketch_exp_results/{system}-{workload}-{num_threads}"
+    os.makedirs(results_path, exist_ok=True)
     # assume the branch of splinterdb is deukyeon/fantastiCC-refactor
     os.chdir(splinterdb_path)
     run_cmd("git checkout src/experimental_mode.h")
@@ -109,7 +105,7 @@ def run(system, workload, num_threads):
 
     max_size = 8 * 1024 * 1024
     rowsxcols = max_size // (128 // 8)
-    for rows in [1, 2]:
+    for rows in [2]:
         cols = rowsxcols // rows
         while (rows == 1 and cols == 1) or (rows == 2 and cols >= 1):
             os.chdir(splinterdb_path)
