@@ -1,6 +1,6 @@
 #!/usr/bin/bash -x
 
-SYSTEMS=(2pl-no-wait occ-serial occ-parallel sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch mvcc-memory mvcc-sketch mvcc-counter mvcc-disk)
+SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch mvcc-memory mvcc-sketch mvcc-counter mvcc-disk)
 WORKLOADS=(write_intensive read_intensive write_intensive_medium read_intensive_medium)
 
 LOG_DIR=$HOME/ycsb_logs
