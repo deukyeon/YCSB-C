@@ -88,9 +88,16 @@ def run(system, workload, num_threads):
     os.makedirs("sketch_exp_results", exist_ok=True)
     results_path = f"sketch_exp_results/{system}-{workload}-{num_threads}"
     os.makedirs(results_path, exist_ok=True)
-    # assume the branch of splinterdb is deukyeon/fantastiCC-refactor
     os.chdir(splinterdb_path)
     run_cmd("git checkout src/experimental_mode.h")
+    if system == "tictoc":
+        src_file = "transaction_tictoc_sketch.h"
+    elif system == "sto":
+        src_file = "transaction_sto.h"
+    elif system == "mvcc":
+        src_file = "transaction_mvcc_sketch.h"
+    run_cmd(f"git checkout src/transaction_impl/{src_file}")
+    run_cmd("git checkout deukyeon/mvcc-working-io_contexts")
     if system == "tictoc":
         run_cmd("sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_SKETCH 1/g' src/experimental_mode.h")
     elif system == "sto":
@@ -100,7 +107,7 @@ def run(system, workload, num_threads):
 
     os.environ['CC'] = "clang"
     os.environ['LD'] = "clang"
-    
+
     dev_name = "/dev/nvme0n1"
 
     max_size = 8 * 1024 * 1024
@@ -109,19 +116,10 @@ def run(system, workload, num_threads):
         cols = rowsxcols // rows
         while (rows == 1 and cols == 1) or (rows == 2 and cols >= 1):
             os.chdir(splinterdb_path)
-            
-            if system == "tictoc":
-                src_file = "transaction_tictoc_sketch.h"
-            elif system == "sto":
-                src_file = "transaction_sto.h"
-            elif system == "mvcc":
-                src_file = "transaction_mvcc_sketch.h"
-        
             run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/{src_file}")
             run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/{src_file}")
             run_cmd("sudo -E make clean")
             run_cmd("sudo -E make install")
-
             os.chdir(ycsb_path)
             run_cmd("make clean")
             run_cmd("make")
