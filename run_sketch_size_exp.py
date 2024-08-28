@@ -109,8 +109,16 @@ def run(system, workload, num_threads):
         cols = rowsxcols // rows
         while (rows == 1 and cols == 1) or (rows == 2 and cols >= 1):
             os.chdir(splinterdb_path)
-            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/transaction_tictoc_sketch.h")
-            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/transaction_tictoc_sketch.h")
+            
+            if system == "tictoc":
+                src_file = "transaction_tictoc_sketch.h"
+            elif system == "sto":
+                src_file = "transaction_sto_sketch.h"
+            elif system == "mvcc":
+                src_file = "transaction_mvcc_sketch.h"
+        
+            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/{src_file}")
+            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/{src_file}")
             run_cmd("sudo -E make clean")
             run_cmd("sudo -E make install")
 
