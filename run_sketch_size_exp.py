@@ -113,7 +113,7 @@ def run(system, workload, num_threads):
             if system == "tictoc":
                 src_file = "transaction_tictoc_sketch.h"
             elif system == "sto":
-                src_file = "transaction_sto_sketch.h"
+                src_file = "transaction_sto.h"
             elif system == "mvcc":
                 src_file = "transaction_mvcc_sketch.h"
         
