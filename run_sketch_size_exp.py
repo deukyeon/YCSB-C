@@ -141,14 +141,14 @@ def run(system, workload, num_threads):
 run("tictoc", "write_intensive", 60)
 run("tictoc", "read_intensive", 60)
 run("tictoc", "read_intensive", 16)
-run("tictoc", "read_intensive_67M", 16)
+run("tictoc", "read_intensive_67M", 60)
 
 run("sto", "write_intensive", 60)
 run("sto", "read_intensive", 60)
 run("sto", "read_intensive", 16)
-run("sto", "read_intensive_67M", 16)
+run("sto", "read_intensive_67M", 60)
 
 run("mvcc", "write_intensive", 60)
 run("mvcc", "read_intensive", 60)
 run("mvcc", "read_intensive", 16)
-run("mvcc", "read_intensive_67M", 16)
+run("mvcc", "read_intensive_67M", 60)
