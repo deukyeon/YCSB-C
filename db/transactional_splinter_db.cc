@@ -75,8 +75,8 @@ TransactionalSplinterDB::TransactionalSplinterDB(
       props.GetIntProperty("splinterdb.num_memtable_bg_threads");
    splinterdb_cfg.num_normal_bg_threads =
       props.GetIntProperty("splinterdb.num_normal_bg_threads");
-   splinterdb_cfg.io_contexts_per_process =
-      props.GetIntProperty("splinterdb.io_contexts_per_process");
+   // splinterdb_cfg.io_contexts_per_process =
+   //    props.GetIntProperty("splinterdb.io_contexts_per_process");
 
    if (preloaded) {
       assert(!transactional_splinterdb_open(&splinterdb_cfg, &spl));
