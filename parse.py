@@ -124,10 +124,10 @@ output_filenames = {
     'tictoc-memory': 'TicToc-Memory',
     'tictoc-counter': 'TicToc-Counter',
     'tictoc-sketch': 'TicToc-FPSketch',
-    'mvcc-memory': 'MVCC-Memory',
-    'mvcc-sketch': 'MVCC-FPSketch',
-    'mvcc-counter': 'MVCC-Counter',
-    'mvcc-disk': 'MVCC-Disk'
+    'mvcc-memory': 'MVTO-Memory',
+    'mvcc-sketch': 'MVTO-FPSketch',
+    'mvcc-counter': 'MVTO-Counter',
+    'mvcc-disk': 'MVTO-Disk'
 }
 
 os.makedirs(output_dir, exist_ok=True)
