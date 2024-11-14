@@ -14,7 +14,7 @@ opspertransaction=16
 maxtxncount=100000
 maxtxnretry=5
 mintxnabortpaneltyus=2000
-longtxnrate=0.05
+longtxnratio=0.05
 longtxnreadratio=1
 maxrowpertxn=1000
 
