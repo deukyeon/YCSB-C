@@ -181,7 +181,20 @@ public:
    std::vector<double>        abort_txn_latencies;
    std::vector<unsigned long> abort_cnt_per_txn;
 
-   YCSBOutput() : commit_cnt(0), abort_cnt(0), txn_cnt(0){};
+   uint64_t                   long_txn_commit_cnt;
+   uint64_t                   long_txn_abort_cnt;
+   uint64_t                   long_txn_cnt;
+   std::vector<double>        long_txn_commit_txn_latencies;
+   std::vector<double>        long_txn_abort_txn_latencies;
+   std::vector<unsigned long> long_txn_abort_cnt_per_txn;
+
+   YCSBOutput()
+      : commit_cnt(0),
+        abort_cnt(0),
+        txn_cnt(0),
+        long_txn_commit_cnt(0),
+        long_txn_abort_cnt(0),
+        long_txn_cnt(0){};
 };
 
 template<class Client = ycsbc::Client>
@@ -270,6 +283,15 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
       output->commit_txn_latencies = client.GetCommitTxnLatnecies();
       output->abort_txn_latencies  = client.GetAbortTxnLatnecies();
       output->abort_cnt_per_txn    = client.GetAbortCntPerTxn();
+      output->long_txn_cnt =
+         client.GetLongTxnCnt() + client.GetLongTxnAbortCnt();
+      output->long_txn_commit_cnt = client.GetLongTxnCnt();
+      output->long_txn_abort_cnt  = client.GetLongTxnAbortCnt();
+      output->long_txn_commit_txn_latencies =
+         client.GetLongTxnCommitTxnLatnecies();
+      output->long_txn_abort_txn_latencies =
+         client.GetLongTxnAbortTxnLatnecies();
+      output->long_txn_abort_cnt_per_txn = client.GetLongTxnAbortCntPerTxn();
    }
 }
 
@@ -737,6 +759,67 @@ main(const int argc, const char *argv[])
          std::cout << "# Abort count per transaction" << std::endl;
          PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
 
+         /*
+          * Print stats by transactions if long txn is enabled.
+          */
+         bool is_long_txn_enabled =
+            stof(workload.props.GetProperty(
+               ycsbc::CoreWorkload::LONG_TXN_RATIO,
+               ycsbc::CoreWorkload::LONG_TXN_RATIO_DEFAULT))
+            > 0.0;
+         if (is_long_txn_enabled) {
+            std::cout << "# Long Transaction Stats" << std::endl;
+            uint64_t total_long_txn_cnt    = 0;
+            uint64_t total_long_commit_cnt = 0;
+            uint64_t total_long_abort_cnt  = 0;
+
+            std::vector<double> total_long_commit_txn_latencies;
+            std::vector<double> total_long_abort_txn_latencies;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               // cout << "[Client " << thr_i
+               //      << "] long_txn_commit_cnt: " <<
+               //      ycsb_outputs[thr_i].long_txn_commit_cnt
+               //      << ", long_txn_abort_cnt: " <<
+               //      ycsb_outputs[thr_i].long_txn_abort_cnt << endl;
+               total_long_txn_cnt += ycsb_outputs[thr_i].long_txn_cnt;
+               total_long_commit_cnt += ycsb_outputs[thr_i].long_txn_commit_cnt;
+               total_long_abort_cnt += ycsb_outputs[thr_i].long_txn_abort_cnt;
+
+               total_long_commit_txn_latencies.insert(
+                  total_long_commit_txn_latencies.end(),
+                  ycsb_outputs[thr_i].long_txn_commit_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].long_txn_commit_txn_latencies.end());
+               total_long_abort_txn_latencies.insert(
+                  total_long_abort_txn_latencies.end(),
+                  ycsb_outputs[thr_i].long_txn_abort_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].long_txn_abort_txn_latencies.end());
+            }
+            std::cout << "# Long Transaction count:\t" << total_long_txn_cnt
+                      << std::endl;
+            std::cout << "# Committed Long Transaction count:\t"
+                      << total_long_commit_cnt << std::endl;
+            std::cout << "# Aborted Long Transaction count:\t"
+                      << total_long_txn_cnt - total_long_commit_cnt
+                      << std::endl;
+            std::cout << "# Long Transaction abort rate:\t\t"
+                      << (double)total_long_abort_cnt
+                            / (total_long_abort_cnt + total_long_commit_cnt)
+                      << std::endl;
+            std::cout << "# Long Transaction abort portion (%):\t"
+                      << (double)total_long_abort_cnt / total_abort_cnt * 100
+                      << std::endl;
+
+            std::sort(total_long_commit_txn_latencies.begin(),
+                      total_long_commit_txn_latencies.end());
+            std::sort(total_long_abort_txn_latencies.begin(),
+                      total_long_abort_txn_latencies.end());
+
+            std::cout << "# Long Transaction Commit Latencies (us)"
+                      << std::endl;
+            PrintDistribution<double>(total_long_commit_txn_latencies);
+            std::cout << "# Long Transaction Abort Latencies (us)" << std::endl;
+            PrintDistribution<double>(total_long_abort_txn_latencies);
+         }
          db->PrintDBStats();
       }
    }
