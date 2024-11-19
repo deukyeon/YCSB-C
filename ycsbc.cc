@@ -19,6 +19,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <unistd.h>
 
 #define TPCC 1
 
@@ -388,6 +389,42 @@ PrintDistribution(std::vector<T> &data, std::ostream &out = std::cout)
    out << "P99.9: " << data[data.size() * 999 / 1000] << std::endl;
 };
 
+struct IOStats {
+   long long read_bytes  = 0;
+   long long write_bytes = 0;
+};
+
+IOStats
+getIOStats()
+{
+   IOStats ioStats;
+
+   // Get the current process ID (PID)
+   pid_t       pid        = getpid();
+   std::string ioFilePath = "/proc/" + std::to_string(pid) + "/io";
+
+   // Open the /proc/<pid>/io file
+   std::ifstream ioFile(ioFilePath);
+   if (!ioFile.is_open()) {
+      std::cerr << "Failed to open " << ioFilePath << std::endl;
+      return ioStats;
+   }
+
+   // Parse the file to extract read_bytes and write_bytes
+   std::string line;
+   while (std::getline(ioFile, line)) {
+      if (line.find("read_bytes:") == 0) {
+         ioStats.read_bytes = std::stoll(line.substr(line.find(":") + 1));
+      } else if (line.find("write_bytes:") == 0) {
+         ioStats.write_bytes = std::stoll(line.substr(line.find(":") + 1));
+      }
+   }
+
+   ioFile.close();
+   return ioStats;
+}
+
+
 int
 main(const int argc, const char *argv[])
 {
@@ -568,6 +605,8 @@ main(const int argc, const char *argv[])
          YCSBInput                ycsb_inputs[num_threads_load];
          YCSBOutput               ycsb_outputs[num_threads_load];
 
+         IOStats io_stats_load_begin = getIOStats();
+
          timer.Start();
          {
             cout << "# Loading records:\t" << record_count << endl;
@@ -599,7 +638,9 @@ main(const int argc, const char *argv[])
                t.join();
             }
          }
-         double load_duration = timer.End();
+         double  load_duration     = timer.End();
+         IOStats io_stats_load_end = getIOStats();
+
          if (pmode != no_progress) {
             cout << "\n";
          }
@@ -614,6 +655,14 @@ main(const int argc, const char *argv[])
          cout << "Load duration (sec):\t" << load_duration << endl;
 
          db->PrintDBStats();
+
+         long long read_bytes =
+            io_stats_load_end.read_bytes - io_stats_load_begin.read_bytes;
+         long long write_bytes =
+            io_stats_load_end.write_bytes - io_stats_load_begin.write_bytes;
+         cout << "[Load phase IO stats]\t read_bytes: " << read_bytes
+              << ", write_bytes: " << write_bytes << " (Throughput (B/s): "
+              << (read_bytes + write_bytes) / load_duration << ")" << endl;
       }
 
       uint64_t ops_per_transactions = 1;
@@ -650,6 +699,7 @@ main(const int argc, const char *argv[])
          YCSBOutput            ycsb_outputs[num_threads];
          std::atomic<uint64_t> num_clients_done(0);
 
+         IOStats io_stats_run_begin = getIOStats();
          timer.Start();
          {
             for (thr_i = 0; thr_i < num_threads; ++thr_i) {
@@ -684,7 +734,8 @@ main(const int argc, const char *argv[])
                t.join();
             }
          }
-         double run_duration = timer.End();
+         double  run_duration     = timer.End();
+         IOStats io_stats_run_end = getIOStats();
 
          if (pmode != no_progress) {
             cout << "\n";
@@ -907,6 +958,14 @@ main(const int argc, const char *argv[])
             PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
          }
          db->PrintDBStats();
+
+         long long read_bytes =
+            io_stats_run_end.read_bytes - io_stats_run_begin.read_bytes;
+         long long write_bytes =
+            io_stats_run_end.write_bytes - io_stats_run_begin.write_bytes;
+         cout << "[Run phase IO stats]\t read_bytes: " << read_bytes
+              << ", write_bytes: " << write_bytes << " (Throughput (B/s): "
+              << (read_bytes + write_bytes) / run_duration << ")" << endl;
       }
    }
 
