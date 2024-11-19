@@ -697,68 +697,6 @@ main(const int argc, const char *argv[])
          total_txn_count           = 0;
          uint64_t total_commit_cnt = 0;
          uint64_t total_abort_cnt  = 0;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-            cout << "[Client " << thr_i
-                 << "] commit_cnt: " << ycsb_outputs[thr_i].commit_cnt
-                 << ", abort_cnt: " << ycsb_outputs[thr_i].abort_cnt << endl;
-            total_txn_count += ycsb_outputs[thr_i].txn_cnt;
-            total_commit_cnt += ycsb_outputs[thr_i].commit_cnt;
-            total_abort_cnt += ycsb_outputs[thr_i].abort_cnt;
-         }
-         cout << "# Transaction count:\t" << total_txn_count << endl;
-         cout << "# Committed Transaction count:\t" << total_commit_cnt << endl;
-         cout << "# Aborted Transaction count:\t"
-              << total_txn_count - total_commit_cnt << endl;
-         cout << "# Transaction throughput (KTPS)" << endl;
-         cout << props["dbname"] << '\t' << workload.filename << '\t'
-              << num_threads << '\t';
-         cout << total_commit_cnt / run_duration / 1000 << endl;
-         cout << "Run duration (sec):\t" << run_duration << endl;
-         cout << "# Abort count:\t" << total_abort_cnt << '\n';
-         cout << "Abort rate:\t"
-              << (double)total_abort_cnt / (total_abort_cnt + total_commit_cnt)
-              << "\n";
-         /*
-          * Print Latencies
-          */
-         std::vector<double> total_commit_txn_latencies;
-         std::vector<double> total_abort_txn_latencies;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-            total_commit_txn_latencies.insert(
-               total_commit_txn_latencies.end(),
-               ycsb_outputs[thr_i].commit_txn_latencies.begin(),
-               ycsb_outputs[thr_i].commit_txn_latencies.end());
-            total_abort_txn_latencies.insert(
-               total_abort_txn_latencies.end(),
-               ycsb_outputs[thr_i].abort_txn_latencies.begin(),
-               ycsb_outputs[thr_i].abort_txn_latencies.end());
-         }
-
-         std::sort(total_commit_txn_latencies.begin(),
-                   total_commit_txn_latencies.end());
-         std::sort(total_abort_txn_latencies.begin(),
-                   total_abort_txn_latencies.end());
-
-         std::cout << "# Commit Latencies (us)" << std::endl;
-         PrintDistribution<double>(total_commit_txn_latencies);
-         std::cout << "# Abort Latencies (us)" << std::endl;
-         PrintDistribution<double>(total_abort_txn_latencies);
-
-         /*
-          * Print abort count per transaction
-          */
-         std::vector<unsigned long> total_abort_cnt_per_txn;
-         for (thr_i = 0; thr_i < num_threads; ++thr_i) {
-            total_abort_cnt_per_txn.insert(
-               total_abort_cnt_per_txn.end(),
-               ycsb_outputs[thr_i].abort_cnt_per_txn.begin(),
-               ycsb_outputs[thr_i].abort_cnt_per_txn.end());
-         }
-         std::sort(total_abort_cnt_per_txn.begin(),
-                   total_abort_cnt_per_txn.end());
-         std::cout << "# Abort count per transaction" << std::endl;
-         PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
-
          /*
           * Print stats by transactions if long txn is enabled.
           */
@@ -768,6 +706,90 @@ main(const int argc, const char *argv[])
                ycsbc::CoreWorkload::LONG_TXN_RATIO_DEFAULT))
             > 0.0;
          if (is_long_txn_enabled) {
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               cout << "[Client " << thr_i << "] commit_cnt: "
+                    << ycsb_outputs[thr_i].commit_cnt
+                          + ycsb_outputs[thr_i].long_txn_commit_cnt
+                    << ", abort_cnt: "
+                    << ycsb_outputs[thr_i].abort_cnt
+                          + ycsb_outputs[thr_i].long_txn_abort_cnt
+                    << endl;
+               total_txn_count += ycsb_outputs[thr_i].txn_cnt
+                                  + ycsb_outputs[thr_i].long_txn_cnt;
+               total_commit_cnt += ycsb_outputs[thr_i].commit_cnt
+                                   + ycsb_outputs[thr_i].long_txn_commit_cnt;
+               total_abort_cnt += ycsb_outputs[thr_i].abort_cnt
+                                  + ycsb_outputs[thr_i].long_txn_abort_cnt;
+            }
+            cout << "# Transaction count:\t" << total_txn_count << endl;
+            cout << "# Committed Transaction count:\t" << total_commit_cnt
+                 << endl;
+            cout << "# Aborted Transaction count:\t"
+                 << total_txn_count - total_commit_cnt << endl;
+            cout << "# Transaction throughput (KTPS)" << endl;
+            cout << props["dbname"] << '\t' << workload.filename << '\t'
+                 << num_threads << '\t';
+            cout << total_commit_cnt / run_duration / 1000 << endl;
+            cout << "Run duration (sec):\t" << run_duration << endl;
+            cout << "# Abort count:\t" << total_abort_cnt << '\n';
+            cout << "Abort rate:\t"
+                 << (double)total_abort_cnt
+                       / (total_abort_cnt + total_commit_cnt)
+                 << "\n";
+            /*
+             * Print Latencies
+             */
+            std::vector<double> total_commit_txn_latencies;
+            std::vector<double> total_abort_txn_latencies;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               total_commit_txn_latencies.insert(
+                  total_commit_txn_latencies.end(),
+                  ycsb_outputs[thr_i].commit_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].commit_txn_latencies.end());
+               total_commit_txn_latencies.insert(
+                  total_commit_txn_latencies.end(),
+                  ycsb_outputs[thr_i].long_txn_commit_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].long_txn_commit_txn_latencies.end());
+               total_abort_txn_latencies.insert(
+                  total_abort_txn_latencies.end(),
+                  ycsb_outputs[thr_i].abort_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].abort_txn_latencies.end());
+               total_abort_txn_latencies.insert(
+                  total_abort_txn_latencies.end(),
+                  ycsb_outputs[thr_i].long_txn_abort_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].long_txn_abort_txn_latencies.end());
+            }
+
+            std::sort(total_commit_txn_latencies.begin(),
+                      total_commit_txn_latencies.end());
+            std::sort(total_abort_txn_latencies.begin(),
+                      total_abort_txn_latencies.end());
+
+            std::cout << "# Commit Latencies (us)" << std::endl;
+            PrintDistribution<double>(total_commit_txn_latencies);
+            std::cout << "# Abort Latencies (us)" << std::endl;
+            PrintDistribution<double>(total_abort_txn_latencies);
+
+            /*
+             * Print abort count per transaction
+             */
+            std::vector<unsigned long> total_abort_cnt_per_txn;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               total_abort_cnt_per_txn.insert(
+                  total_abort_cnt_per_txn.end(),
+                  ycsb_outputs[thr_i].abort_cnt_per_txn.begin(),
+                  ycsb_outputs[thr_i].abort_cnt_per_txn.end());
+
+               total_abort_cnt_per_txn.insert(
+                  total_abort_cnt_per_txn.end(),
+                  ycsb_outputs[thr_i].long_txn_abort_cnt_per_txn.begin(),
+                  ycsb_outputs[thr_i].long_txn_abort_cnt_per_txn.end());
+            }
+            std::sort(total_abort_cnt_per_txn.begin(),
+                      total_abort_cnt_per_txn.end());
+            std::cout << "# Abort count per transaction" << std::endl;
+            PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
+
             std::cout << "# Long Transaction Stats" << std::endl;
             uint64_t total_long_txn_cnt    = 0;
             uint64_t total_long_commit_cnt = 0;
@@ -819,6 +841,70 @@ main(const int argc, const char *argv[])
             PrintDistribution<double>(total_long_commit_txn_latencies);
             std::cout << "# Long Transaction Abort Latencies (us)" << std::endl;
             PrintDistribution<double>(total_long_abort_txn_latencies);
+         } else {
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               cout << "[Client " << thr_i
+                    << "] commit_cnt: " << ycsb_outputs[thr_i].commit_cnt
+                    << ", abort_cnt: " << ycsb_outputs[thr_i].abort_cnt << endl;
+               total_txn_count += ycsb_outputs[thr_i].txn_cnt;
+               total_commit_cnt += ycsb_outputs[thr_i].commit_cnt;
+               total_abort_cnt += ycsb_outputs[thr_i].abort_cnt;
+            }
+            cout << "# Transaction count:\t" << total_txn_count << endl;
+            cout << "# Committed Transaction count:\t" << total_commit_cnt
+                 << endl;
+            cout << "# Aborted Transaction count:\t"
+                 << total_txn_count - total_commit_cnt << endl;
+            cout << "# Transaction throughput (KTPS)" << endl;
+            cout << props["dbname"] << '\t' << workload.filename << '\t'
+                 << num_threads << '\t';
+            cout << total_commit_cnt / run_duration / 1000 << endl;
+            cout << "Run duration (sec):\t" << run_duration << endl;
+            cout << "# Abort count:\t" << total_abort_cnt << '\n';
+            cout << "Abort rate:\t"
+                 << (double)total_abort_cnt
+                       / (total_abort_cnt + total_commit_cnt)
+                 << "\n";
+            /*
+             * Print Latencies
+             */
+            std::vector<double> total_commit_txn_latencies;
+            std::vector<double> total_abort_txn_latencies;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               total_commit_txn_latencies.insert(
+                  total_commit_txn_latencies.end(),
+                  ycsb_outputs[thr_i].commit_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].commit_txn_latencies.end());
+               total_abort_txn_latencies.insert(
+                  total_abort_txn_latencies.end(),
+                  ycsb_outputs[thr_i].abort_txn_latencies.begin(),
+                  ycsb_outputs[thr_i].abort_txn_latencies.end());
+            }
+
+            std::sort(total_commit_txn_latencies.begin(),
+                      total_commit_txn_latencies.end());
+            std::sort(total_abort_txn_latencies.begin(),
+                      total_abort_txn_latencies.end());
+
+            std::cout << "# Commit Latencies (us)" << std::endl;
+            PrintDistribution<double>(total_commit_txn_latencies);
+            std::cout << "# Abort Latencies (us)" << std::endl;
+            PrintDistribution<double>(total_abort_txn_latencies);
+
+            /*
+             * Print abort count per transaction
+             */
+            std::vector<unsigned long> total_abort_cnt_per_txn;
+            for (thr_i = 0; thr_i < num_threads; ++thr_i) {
+               total_abort_cnt_per_txn.insert(
+                  total_abort_cnt_per_txn.end(),
+                  ycsb_outputs[thr_i].abort_cnt_per_txn.begin(),
+                  ycsb_outputs[thr_i].abort_cnt_per_txn.end());
+            }
+            std::sort(total_abort_cnt_per_txn.begin(),
+                      total_abort_cnt_per_txn.end());
+            std::cout << "# Abort count per transaction" << std::endl;
+            PrintDistribution<unsigned long>(total_abort_cnt_per_txn);
          }
          db->PrintDBStats();
       }
