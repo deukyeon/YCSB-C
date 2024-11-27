@@ -11,10 +11,12 @@ available_systems = [
     'silo-memory',
     'tictoc-memory',
     'tictoc-counter',
+    'tictoc-hashtable',
     'tictoc-sketch',
     'sto-disk',
     'sto-sketch',
     'sto-counter',
+    'sto-hashtable',
     'sto-memory',
     '2pl-no-wait',
     '2pl-wait-die',
@@ -22,6 +24,7 @@ available_systems = [
     'mvcc-disk',
     'mvcc-memory',
     'mvcc-counter',
+    'mvcc-hashtable',
     'mvcc-sketch'
 ]
 
@@ -34,10 +37,12 @@ system_branch_map = {
     'silo-memory': 'deukyeon/mvcc-working-io_contexts',
     'tictoc-memory': 'deukyeon/mvcc-working-io_contexts',
     'tictoc-counter': 'deukyeon/mvcc-working-io_contexts',
+    'tictoc-hashtable': 'deukyeon/mvcc-working-io_contexts',
     'tictoc-sketch': 'deukyeon/mvcc-working-io_contexts',
     'sto-disk': 'deukyeon/mvcc-working-io_contexts',
     'sto-sketch': 'deukyeon/mvcc-working-io_contexts',
     'sto-counter': 'deukyeon/mvcc-working-io_contexts',
+    'sto-hashtable': 'deukyeon/mvcc-working-io_contexts',
     'sto-memory': 'deukyeon/mvcc-working-io_contexts',
     '2pl-no-wait': 'deukyeon/mvcc-working-io_contexts',
     '2pl-wait-die': 'deukyeon/mvcc-working-io_contexts',
@@ -45,6 +50,7 @@ system_branch_map = {
     'mvcc-disk': 'deukyeon/mvcc-working-io_contexts',
     'mvcc-memory': 'deukyeon/mvcc-working-io_contexts',
     'mvcc-counter': 'deukyeon/mvcc-working-io_contexts',
+    'mvcc-hashtable': 'deukyeon/mvcc-working-io_contexts',
     'mvcc-sketch': 'deukyeon/mvcc-working-io_contexts',
 }
 
@@ -55,17 +61,20 @@ system_sed_map = {
     'tictoc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_DISK [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_DISK 1/g' src/experimental_mode.h"],
     'tictoc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_MEMORY 1/g' src/experimental_mode.h"],
     'tictoc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_COUNTER 1/g' src/experimental_mode.h"],
+    'tictoc-hashtable': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_HASHTABLE [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_HASHTABLE 1/g' src/experimental_mode.h"],
     'tictoc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_TICTOC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_TICTOC_SKETCH 1/g' src/experimental_mode.h"],
     'sto-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_DISK [ ]*0/#define EXPERIMENTAL_MODE_STO_DISK 1/g' src/experimental_mode.h"],
     'sto-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_STO_MEMORY 1/g' src/experimental_mode.h"],
     'sto-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_STO_SKETCH 1/g' src/experimental_mode.h"],
     'sto-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_STO_COUNTER 1/g' src/experimental_mode.h"],
+    'sto-hashtable': ["sed -i 's/#define EXPERIMENTAL_MODE_STO_HASHTABLE [ ]*0/#define EXPERIMENTAL_MODE_STO_HASHTABLE 1/g' src/experimental_mode.h"],
     '2pl-no-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_NO_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_NO_WAIT 1/g' src/experimental_mode.h"],
     '2pl-wait-die': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE [ ]*0/#define EXPERIMENTAL_MODE_2PL_WAIT_DIE 1/g' src/experimental_mode.h"],
     '2pl-wound-wait': ["sed -i 's/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT [ ]*0/#define EXPERIMENTAL_MODE_2PL_WOUND_WAIT 1/g' src/experimental_mode.h"],
     'mvcc-disk': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_DISK [ ]*0/#define EXPERIMENTAL_MODE_MVCC_DISK 1/g' src/experimental_mode.h"],
     'mvcc-memory': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_MEMORY [ ]*0/#define EXPERIMENTAL_MODE_MVCC_MEMORY 1/g' src/experimental_mode.h"],
     'mvcc-counter': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_COUNTER [ ]*0/#define EXPERIMENTAL_MODE_MVCC_COUNTER 1/g' src/experimental_mode.h"],
+    'mvcc-hashtable': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_HASHTABLE [ ]*0/#define EXPERIMENTAL_MODE_MVCC_HASHTABLE 1/g' src/experimental_mode.h"],
     'mvcc-sketch': ["sed -i 's/#define EXPERIMENTAL_MODE_MVCC_SKETCH [ ]*0/#define EXPERIMENTAL_MODE_MVCC_SKETCH 1/g' src/experimental_mode.h"],
 }
 
