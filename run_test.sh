@@ -14,12 +14,14 @@ do
                 continue
             fi
 
-            echo "python3 ycsb.py -s $prot-$sys -w $work -d /dev/sdb2 -t 60 -r 240"
+	    cmd="python3 ycsb.py -s $prot-$sys -w $work -d /dev/nvme0n1 -c 6144 -t 60 -r 240"
+
+            echo $cmd
 
             # Retry until the output file contains the desired line
             while true
             do
-                python3 ycsb.py -s $prot-$sys -w $work -d /dev/nvme0n1 -c 6144 -t 60 -r 240 > $LOG_FILE
+                $cmd > $LOG_FILE
 
                 # Check if the log file contains the required line
                 if grep -q "# Transaction throughput (KTPS)" "$LOG_FILE"; then
