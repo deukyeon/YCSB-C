@@ -120,20 +120,23 @@ output_filenames = {
     'sto-memory': 'STO-Memory',
     'sto-counter': 'STO-Counter',
     'sto-sketch': 'STO-FPSketch',
+    'sto-hashtable': 'STO-HashTable',
     'tictoc-disk': 'TicToc-Disk',
     'tictoc-memory': 'TicToc-Memory',
     'tictoc-counter': 'TicToc-Counter',
     'tictoc-sketch': 'TicToc-FPSketch',
+    'tictoc-hashtable': 'TicToc-HashTable',
     'mvcc-memory': 'MVTO-Memory',
     'mvcc-sketch': 'MVTO-FPSketch',
     'mvcc-counter': 'MVTO-Counter',
-    'mvcc-disk': 'MVTO-Disk'
+    'mvcc-disk': 'MVTO-Disk',
+    'mvcc-hashtable': 'MVTO-HashTable'
 }
 
 os.makedirs(output_dir, exist_ok=True)
 
 # Example usage
-for system in ['2pl-no-wait', 'occ-serial', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter', 'mvcc-disk']:
+for system in ['2pl-no-wait', 'occ-serial', 'sto-disk', 'sto-memory', 'sto-counter', 'sto-sketch', 'sto-hashtable', 'tictoc-disk', 'tictoc-memory', 'tictoc-counter', 'tictoc-sketch', 'tictoc-hashtable', 'mvcc-memory', 'mvcc-sketch', 'mvcc-counter', 'mvcc-disk', 'mvcc-hashtable']:
     for workload in ['write_intensive', 'read_intensive', 'write_intensive_medium', 'read_intensive_medium',
                      'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh4-upserts', 'tpcc-wh8-upserts', 'tpcc-wh16-upserts', 'tpcc-wh32-upserts']:
         input_file_paths = []
