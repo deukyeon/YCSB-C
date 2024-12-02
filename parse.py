@@ -147,7 +147,7 @@ for system in output_filenames.keys():
                      'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh4-upserts', 'tpcc-wh8-upserts', 'tpcc-wh16-upserts', 'tpcc-wh32-upserts']:
         input_file_paths = []
         for thr in [1, 2] + list(range(4, 64, 4)):
-            for run in range(1, 2):
+            for run in range(1, 4):
                 if os.path.exists(f'{input_dir}/{system}_{workload}_{thr}_{run}.log'):
                     input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{run}.log')
         if not input_file_paths:

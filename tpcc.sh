@@ -1,17 +1,17 @@
 #!/usr/bin/bash -x
 
-SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch mvcc-memory mvcc-sketch mvcc-counter mvcc-disk)
-WORKLOADS=(tpcc-wh4 tpcc-wh8 tpcc-wh16 tpcc-wh32 tpcc-wh4-upserts tpcc-wh8-upserts tpcc-wh16-upserts tpcc-wh32-upserts)
+SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch sto-hashtable tictoc-disk tictoc-memory tictoc-counter tictoc-sketch tictoc-hashtable mvcc-memory mvcc-sketch mvcc-counter mvcc-disk mvcc-hashtable)
+WORKLOADS=(tpcc-wh4 tpcc-wh8 tpcc-wh16 tpcc-wh32)
 
 LOG_DIR=$HOME/tpcc_logs
 OUTPUT_DIR=$HOME/tpcc_results
 
 DEV=/dev/nvme0n1
 
-NRUNS=1
+NRUNS=3
 
 CACHE_SIZE=256
-RUN_SEC=240
+RUN_SEC=60
 
 mkdir -p $LOG_DIR
 

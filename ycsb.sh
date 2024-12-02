@@ -1,6 +1,6 @@
 #!/usr/bin/bash -x
 
-SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch tictoc-disk tictoc-memory tictoc-counter tictoc-sketch mvcc-memory mvcc-sketch mvcc-counter mvcc-disk)
+SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch sto-hashtable tictoc-disk tictoc-memory tictoc-counter tictoc-sketch tictoc-hashtable mvcc-memory mvcc-sketch mvcc-counter mvcc-disk mvcc-hashtable)
 WORKLOADS=(write_intensive read_intensive write_intensive_medium read_intensive_medium)
 
 LOG_DIR=$HOME/ycsb_logs
@@ -8,7 +8,7 @@ OUTPUT_DIR=$HOME/ycsb_results
 
 DEV=/dev/nvme0n1
 
-NRUNS=1
+NRUNS=3
 
 mkdir -p $LOG_DIR
 
@@ -16,7 +16,8 @@ for work in ${WORKLOADS[@]}
 do 
     for sys in ${SYSTEMS[@]}
     do
-        for thr in 1 2 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
+        # for thr in 1 2 4 8 12 16 20 24 28 32 36 40 44 48 52 56 60
+        for thr in 60
         do
             for run in $(seq 1 ${NRUNS})
             do
