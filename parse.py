@@ -144,7 +144,7 @@ os.makedirs(output_dir, exist_ok=True)
 # Example usage
 for system in output_filenames.keys():
     for workload in ['write_intensive', 'read_intensive', 'write_intensive_medium', 'read_intensive_medium',
-                     'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh4-upserts', 'tpcc-wh8-upserts', 'tpcc-wh16-upserts', 'tpcc-wh32-upserts']:
+                     'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh60', 'tpcc-wh1000']:
         input_file_paths = []
         for thr in [1, 2] + list(range(4, 64, 4)):
             for run in range(1, 4):
