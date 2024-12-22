@@ -31,6 +31,7 @@ do
                 # Retry until the output file contains the desired line
                 while true
                 do
+                    sudo blkdiscard $DEV
                     timeout 3600 ./ycsb.py -s $sys -w $work -t $thr -c 6144 -r 240 -d $DEV | tee $LOG_FILE
 
                     # Check if the log file contains the required line
