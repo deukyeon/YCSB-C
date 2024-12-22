@@ -141,13 +141,16 @@ TPCCWorkload::init(utils::Properties              &props,
    for (unsigned int i = 0; i < num_client_threads + g_num_wh; i++) {
       srand48_r(i, &tpcc_buffer[i]);
    }
-   pthread_t   p_thds[g_num_wh];
-   thread_args a[g_num_wh];
-   for (uint32_t i = 0; i < g_num_wh; i++) {
-      a[i] = {.wl = this, .tid = i};
+   pthread_t   p_thds[num_client_threads];
+   thread_args a[num_client_threads];
+
+   uint32_t current_wh_num = 0;
+
+   for (uint32_t i = 0; i < num_client_threads; i++) {
+      a[i] = {.wl = this, .tid = i, .shared_wh_num = &current_wh_num};
       pthread_create(&p_thds[i], NULL, thread_init_tables, &a[i]);
    }
-   for (uint32_t i = 0; i < g_num_wh; i++)
+   for (uint32_t i = 0; i < num_client_threads; i++)
       pthread_join(p_thds[i], NULL);
 
    printf("TPCC Data Initialization Complete!\n");
@@ -186,17 +189,20 @@ TPCCWorkload::thread_init_tables(void *args)
 {
    TPCCWorkload::thread_args *a = (TPCCWorkload::thread_args *)args;
    a->wl->_db->Init();
-   uint32_t wid = a->tid + 1;
-   assert((uint64_t)a->tid < g_num_wh);
-
-   if (a->tid == 0)
-      a->wl->init_item_table();
-   a->wl->init_warehouse_table(wid);
-   a->wl->init_district_table(wid);
-   a->wl->init_stock_table(wid);
-   for (uint64_t did = 1; did <= DIST_PER_WARE; did++) {
-      a->wl->init_customer_table(did, wid);
-      a->wl->init_order_table(did, wid);
+   while (1) {
+      uint32_t wid = __atomic_add_fetch(a->shared_wh_num, 1, __ATOMIC_SEQ_CST);
+      if (wid > g_num_wh) {
+         break;
+      }
+      if (wid == 1) // Do just once
+         a->wl->init_item_table();
+      a->wl->init_warehouse_table(wid);
+      a->wl->init_district_table(wid);
+      a->wl->init_stock_table(wid);
+      for (uint64_t did = 1; did <= DIST_PER_WARE; did++) {
+         a->wl->init_customer_table(did, wid);
+         a->wl->init_order_table(did, wid);
+      }
    }
    a->wl->_db->Close();
    return NULL;
