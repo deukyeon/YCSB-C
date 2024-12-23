@@ -16,5 +16,5 @@ maxtxnretry=5
 mintxnabortpaneltyus=2000
 longtxnratio=0.5
 longtxnreadratio=0.8
-maxrowpertxn=16
+maxrowpertxn=28
 
