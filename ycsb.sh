@@ -1,7 +1,7 @@
 #!/usr/bin/bash -x
 
 SYSTEMS=(2pl-no-wait occ-serial sto-disk sto-memory sto-counter sto-sketch sto-counter-lazy sto-sketch-lazy tictoc-disk tictoc-memory tictoc-counter tictoc-sketch tictoc-counter-lazy tictoc-sketch-lazy mvcc-memory mvcc-sketch mvcc-counter mvcc-disk mvcc-counter-lazy mvcc-sketch-lazy)
-WORKLOADS=(write_intensive read_intensive write_intensive_medium read_intensive_medium write_intensive_mixed)
+WORKLOADS=(write_intensive read_intensive write_intensive_medium read_intensive_medium mixed mixed_medium long_txn)
 
 LOG_DIR=$HOME/ycsb_logs
 OUTPUT_DIR=$HOME/ycsb_results
