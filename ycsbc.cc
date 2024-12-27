@@ -765,8 +765,7 @@ main(const int argc, const char *argv[])
                     << ycsb_outputs[thr_i].abort_cnt
                           + ycsb_outputs[thr_i].long_txn_abort_cnt
                     << endl;
-               total_txn_count += ycsb_outputs[thr_i].txn_cnt
-                                  + ycsb_outputs[thr_i].long_txn_cnt;
+               total_txn_count += ycsb_outputs[thr_i].txn_cnt;
                total_commit_cnt += ycsb_outputs[thr_i].commit_cnt
                                    + ycsb_outputs[thr_i].long_txn_commit_cnt;
                total_abort_cnt += ycsb_outputs[thr_i].abort_cnt
