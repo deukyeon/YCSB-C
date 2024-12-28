@@ -203,8 +203,8 @@ void
 DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
 {
    // Hoping this atomic shared variable is not bottlenecked.
-   // static std::atomic<bool> run_bench;
-   // run_bench.store(true);
+   static std::atomic<bool> run_bench;
+   run_bench.store(true);
    input->db->Init();
    Client client(id, *input->db, *input->wl);
 
@@ -244,7 +244,7 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
                         input->last_printed);
 
       } else if (input->wl->max_txn_count() > 0) {
-         while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
+         while (txn_cnt < input->wl->max_txn_count() && run_bench.load()) {
          // while (txn_cnt < input->wl->max_txn_count()) {
             txn_cnt += client.DoTransaction();
             ProgressUpdate(input->pmode,
