@@ -244,8 +244,8 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
                         input->last_printed);
 
       } else if (input->wl->max_txn_count() > 0) {
-         // while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
-         while (txn_cnt < input->wl->max_txn_count()) {
+         while (txn_cnt < wl->max_txn_count() && run_bench.load()) {
+         // while (txn_cnt < input->wl->max_txn_count()) {
             txn_cnt += client.DoTransaction();
             ProgressUpdate(input->pmode,
                            input->total_ops,
@@ -258,7 +258,7 @@ DelegateClient(int id, YCSBInput *input, YCSBOutput *output)
                         input->global_op_counter,
                         txn_cnt,
                         input->last_printed);
-         // run_bench.store(false);
+         run_bench.store(false);
       } else {
          for (uint64_t i = 0; i < input->num_ops; ++i) {
             txn_cnt += client.DoTransaction();
