@@ -110,36 +110,32 @@ def run(system, workload, num_threads):
 
     dev_name = "/dev/nvme0n1"
 
-    max_size = 8 * 1024 * 1024
-    rowsxcols = max_size // (128 // 8)
-    for rows in [2]:
-        cols = rowsxcols // rows
-        while (rows == 1 and cols == 1) or (rows == 2 and cols >= 1):
-            os.chdir(splinterdb_path)
-            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/{src_file}")
-            run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/{src_file}")
-            run_cmd("sudo -E make clean")
-            run_cmd("sudo -E make install")
-            os.chdir(ycsb_path)
-            run_cmd("make clean")
-            run_cmd("make")
+    rows = 2
+    for size in [128, 512, 1024, 2*1024, 4*1024, 8*1024, 16*1024, 32*1024, 128*1024, 4*1024*1024, 8*1024*1024]:
+        cols = (size // 16) // rows
+        os.chdir(splinterdb_path)
+        run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.rows = [0-9]\+;/txn_splinterdb_cfg->sktch_config.rows = {rows};/' src/transaction_impl/{src_file}")
+        run_cmd(f"sed -i 's/txn_splinterdb_cfg->sktch_config.cols = [0-9]\+;/txn_splinterdb_cfg->sktch_config.cols = {cols};/' src/transaction_impl/{src_file}")
+        run_cmd("sudo -E make clean")
+        run_cmd("sudo -E make install")
+        os.chdir(ycsb_path)
+        run_cmd("make clean")
+        run_cmd("make")
 
-            output_path = os.path.join(results_path, f"rows_{rows}_cols_{cols}")
-            run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
-                    -db transactional_splinterdb \
-                    -threads {num_threads} \
-                    -client txn \
-                    -benchmark_seconds 240 \
-                    -L workloads/{workload}.spec \
-                    -W workloads/{workload}.spec \
-                    -p splinterdb.filename {dev_name} \
-                    -p splinterdb.cache_size_mb 6144 \
-                    -p splinterdb.disable_upsert 1 \
-                    -p splinterdb.io_contexts_per_process 64 \
-                    -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)} \
-                    > {output_path} 2>&1")
-            
-            cols = cols // 2
+        output_path = os.path.join(results_path, f"rows_{rows}_cols_{cols}")
+        run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
+                -db transactional_splinterdb \
+                -threads {num_threads} \
+                -client txn \
+                -benchmark_seconds 240 \
+                -L workloads/{workload}.spec \
+                -W workloads/{workload}.spec \
+                -p splinterdb.filename {dev_name} \
+                -p splinterdb.cache_size_mb 6144 \
+                -p splinterdb.disable_upsert 1 \
+                -p splinterdb.io_contexts_per_process 64 \
+                -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)} \
+                > {output_path} 2>&1")
     
     parse_result(results_path)
 
