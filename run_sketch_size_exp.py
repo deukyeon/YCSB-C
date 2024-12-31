@@ -126,6 +126,10 @@ def run(system, workload, num_threads):
         run_cmd("make clean")
         run_cmd("make")
         run_cmd(f"sudo blkdiscard {dev_name}")
+        
+        cache_size = 6144
+        if workload == "read_intensive_67M":
+            cache_size = 614
 
         run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
                 -db transactional_splinterdb \
@@ -135,13 +139,17 @@ def run(system, workload, num_threads):
                 -L workloads/{workload}.spec \
                 -W workloads/{workload}.spec \
                 -p splinterdb.filename {dev_name} \
-                -p splinterdb.cache_size_mb 6144 \
+                -p splinterdb.cache_size_mb {cache_size} \
                 -p splinterdb.disable_upsert 1 \
                 -p splinterdb.io_contexts_per_process 64 \
                 -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)} \
                 > {output_path} 2>&1")
     
     parse_result(results_path)
+
+    output_path = os.path.join(results_path, "memory.log")
+    if not os.path.exists(output_path):
+        run_cmd(f"python3 ycsb.py -s {system}-memory -w {workload} -t {num_threads} -r 240 -d {dev_name} -c {cache_size} > {output_path} 2>&1")
 
             
 run("tictoc", "write_intensive", 60)
