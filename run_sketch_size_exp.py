@@ -109,6 +109,8 @@ def run(system, workload, num_threads):
     os.environ['LD'] = "clang"
 
     dev_name = "/dev/nvme0n1"
+    
+    cache_size = 614 if workload == "read_intensive_67M" else 6144
 
     rows = 2
     for size in [128, 512, 1024, 2*1024, 4*1024, 8*1024, 16*1024, 32*1024, 128*1024, 4*1024*1024, 8*1024*1024]:
@@ -126,10 +128,6 @@ def run(system, workload, num_threads):
         run_cmd("make clean")
         run_cmd("make")
         run_cmd(f"sudo blkdiscard {dev_name}")
-        
-        cache_size = 6144
-        if workload == "read_intensive_67M":
-            cache_size = 614
 
         run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
                 -db transactional_splinterdb \
