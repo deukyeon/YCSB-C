@@ -113,6 +113,7 @@ def run(system, workload, num_threads):
     rows = 2
     for size in [128, 512, 1024, 2*1024, 4*1024, 8*1024, 16*1024, 32*1024, 128*1024, 4*1024*1024, 8*1024*1024]:
         cols = (size // 16) // rows
+        os.chdir(ycsb_path)
         output_path = os.path.join(results_path, f"rows_{rows}_cols_{cols}")
         if os.path.exists(output_path):
             continue
