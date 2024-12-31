@@ -83,6 +83,16 @@ def get_device_size_bytes(device: str) -> int:
     size = int(output.stdout.decode())
     return size
 
+def is_done(file_path):
+    try:
+        with open(file_path, 'r') as logfile:
+            lines = logfile.readlines()
+            for line in lines:
+                if '# Transaction throughput (KTPS)' in line:
+                    return True
+    except FileNotFoundError:
+        return False
+    return False
 
 def run(system, workload, num_threads):
     os.makedirs("sketch_exp_results", exist_ok=True)
@@ -127,27 +137,28 @@ def run(system, workload, num_threads):
         os.chdir(ycsb_path)
         run_cmd("make clean")
         run_cmd("make")
-        run_cmd(f"sudo blkdiscard {dev_name}")
-
-        run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
-                -db transactional_splinterdb \
-                -threads {num_threads} \
-                -client txn \
-                -benchmark_seconds 240 \
-                -L workloads/{workload}.spec \
-                -W workloads/{workload}.spec \
-                -p splinterdb.filename {dev_name} \
-                -p splinterdb.cache_size_mb {cache_size} \
-                -p splinterdb.disable_upsert 1 \
-                -p splinterdb.io_contexts_per_process 64 \
-                -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)} \
-                > {output_path} 2>&1")
+        while not is_done(output_path):
+            run_cmd(f"sudo blkdiscard {dev_name}")
+            run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
+                    -db transactional_splinterdb \
+                    -threads {num_threads} \
+                    -client txn \
+                    -benchmark_seconds 240 \
+                    -L workloads/{workload}.spec \
+                    -W workloads/{workload}.spec \
+                    -p splinterdb.filename {dev_name} \
+                    -p splinterdb.cache_size_mb {cache_size} \
+                    -p splinterdb.disable_upsert 1 \
+                    -p splinterdb.io_contexts_per_process 64 \
+                    -p splinterdb.disk_size_gb {get_device_size_bytes(dev_name) // (1024**3)} \
+                    > {output_path} 2>&1")
     
     parse_result(results_path)
 
     output_path = os.path.join(results_path, "memory.log")
     if not os.path.exists(output_path):
-        run_cmd(f"python3 ycsb.py -s {system}-memory -w {workload} -t {num_threads} -r 240 -d {dev_name} -c {cache_size} > {output_path} 2>&1")
+        while not is_done(output_path):
+            run_cmd(f"python3 ycsb.py -s {system}-memory -w {workload} -t {num_threads} -r 240 -d {dev_name} -c {cache_size} > {output_path} 2>&1")
 
             
 run("tictoc", "write_intensive", 60)
