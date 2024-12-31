@@ -124,6 +124,7 @@ def run(system, workload, num_threads):
         os.chdir(ycsb_path)
         run_cmd("make clean")
         run_cmd("make")
+        run_cmd(f"sudo blkdiscard {dev_name}")
 
         run_cmd(f"LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libjemalloc.so ./ycsbc \
                 -db transactional_splinterdb \
