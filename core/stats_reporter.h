@@ -64,6 +64,8 @@ static void PrintYCSBStats(const std::vector<YCSBOutput> &outputs,
                           double duration,
                           bool is_long_txn_enabled = false)
 {
+   std::cout << "# Number of client threads:\t" << outputs.size() << std::endl;
+   
    uint64_t total_commit_cnt = 0;
    uint64_t total_abort_cnt = 0;
 
@@ -182,6 +184,8 @@ static void PrintYCSBStats(const std::vector<YCSBOutput> &outputs,
 static void PrintTPCCStats(const std::vector<TPCCOutput> &outputs,
                           double duration)
 {
+   std::cout << "# Number of client threads:\t" << outputs.size() << std::endl;
+   
    uint64_t total_committed_cnt = 0;
    uint64_t total_aborted_cnt = 0;
    uint64_t total_aborted_cnt_payment = 0;
