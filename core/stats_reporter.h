@@ -81,7 +81,7 @@ static void PrintYCSBStats(const std::vector<YCSBOutput> &outputs,
    std::cout << "# Committed Transaction count:\t" << total_commit_cnt << std::endl;
    std::cout << "# Aborted Transaction count:\t"
              << total_txn_count - total_commit_cnt << std::endl;
-   std::cout << "# Transaction throughput (KTPS)";
+   std::cout << "# Transaction throughput (KTPS)\t";
    std::cout << total_commit_cnt / duration / 1000 << std::endl;
    std::cout << "Run duration (sec):\t" << duration << std::endl;
    std::cout << "# Abort count:\t" << total_abort_cnt << '\n';
@@ -200,7 +200,7 @@ static void PrintTPCCStats(const std::vector<TPCCOutput> &outputs,
       total_attempts_new_order += outputs[i].attempts_new_order;
    }
 
-   std::cout << "# Transaction throughput (KTPS)";
+   std::cout << "# Transaction throughput (KTPS)\t";
    std::cout << total_committed_cnt / duration / 1000 << std::endl;
    std::cout << "Run duration (sec):\t" << duration << std::endl;
 
