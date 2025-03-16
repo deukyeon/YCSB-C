@@ -92,12 +92,21 @@ system_sed_map = {
 
 class ExpSystem:
     @staticmethod
-    def build(sys, splinterdb_dir, backup=True):
+    def build(sys, splinterdb_dir, spl_threads, backup=True):
 
 
         def run_cmd(cmd):
             subprocess.call(cmd, shell=True)
         
+        def change_max_threads():
+            with open('src/platform_linux/platform.h', 'r') as f:
+                lines = f.readlines()
+            with open('src/platform_linux/platform.h', 'w') as f:
+                for line in lines:
+                    if line.startswith('#define MAX_THREADS ('):
+                        f.write(f'#define MAX_THREADS ({spl_threads})\n')
+                    else:
+                        f.write(line)
 
         os.environ['CC'] = 'clang'
         os.environ['LD'] = 'clang'
@@ -111,6 +120,7 @@ class ExpSystem:
         if sys in system_sed_map:
             for sed in system_sed_map[sys]:
                 run_cmd(sed)
+        change_max_threads()
         run_cmd('sudo -E make -j16 install')
         run_cmd('sudo ldconfig')
         os.chdir(current_dir)
