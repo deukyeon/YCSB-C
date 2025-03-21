@@ -235,7 +235,7 @@ int main(const int argc, const char *argv[]) {
          exit(0);
       }
 
-      const uint64_t num_threads_load = max_cores;
+      const uint64_t num_threads_load = num_threads;
       record_count = stol(load_workload.props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
       uint64_t batch_size = sqrt(record_count);
       if (record_count / batch_size < num_threads_load)
