@@ -93,7 +93,7 @@ system_sed_map = {
 class ExpSystem:
     @staticmethod
     def build(sys, splinterdb_dir, spl_threads, backup=True):
-
+        spl_threads = max(64, spl_threads)
 
         def run_cmd(cmd):
             subprocess.call(cmd, shell=True)
