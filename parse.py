@@ -141,9 +141,9 @@ os.makedirs(output_dir, exist_ok=True)
 for system in output_filenames.keys():
     for workload in ['write_intensive', 'read_intensive', 'write_intensive_medium', 'read_intensive_medium',
                      'mixed', 'mixed_medium', 'long_txn',
-                     'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh60', 'tpcc-wh1000']:
+                     'tpcc-wh4', 'tpcc-wh8', 'tpcc-wh16', 'tpcc-wh32', 'tpcc-wh60']:
         input_file_paths = []
-        for thr in [1, 2] + list(range(4, 64, 4)):
+        for thr in [1, 2] + list(range(4, 128, 4)):
             for run in range(1, 4):
                 if os.path.exists(f'{input_dir}/{system}_{workload}_{thr}_{run}.log'):
                     input_file_paths.append(f'{input_dir}/{system}_{workload}_{thr}_{run}.log')
