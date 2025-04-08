@@ -17,7 +17,7 @@ do
     do
         for thr in 120
         do
-            for cache in 6 7 9 13 21 37
+            for cache in 6 12 18 24 30 36
             do
                 for run in $(seq 1 ${NRUNS})
                 do
